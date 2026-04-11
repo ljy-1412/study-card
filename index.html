@@ -348,6 +348,7 @@
         .study-answer.show {
             display: block;
         }
+        /* 增强表格样式 */
         .answer-markdown {
             line-height: 1.6;
         }
@@ -399,19 +400,23 @@
         .answer-markdown a:hover {
             text-decoration: underline;
         }
+        /* 表格样式 */
         .answer-markdown table {
             width: 100%;
             border-collapse: collapse;
             margin: 1rem 0;
+            font-size: 0.9rem;
+            overflow-x: auto;
+            display: block;
         }
         .answer-markdown th,
         .answer-markdown td {
             padding: 0.6rem;
-            border: 1px solid #e9f0f5;
+            border: 1px solid #cbdde6;
             text-align: left;
         }
         .answer-markdown th {
-            background: #f8fafd;
+            background: #eef3f8;
             font-weight: 600;
             color: #1f4b64;
         }
@@ -553,6 +558,7 @@
         let subjects = [];      // { id, name }
         let groups = [];        // { id, name, subjectId }
         let cards = [];
+        let reviewCards = [];   // 复习卡组卡片 { id, originalCardId, originalGroupId, question, answer }
         let currentGroupId = null;
         let masteredCardsMap = new Map(); // groupId -> Set(cardIds)
         let studyModeActive = false;
@@ -562,6 +568,7 @@
         let groupSearchKeyword = '';
         let cardSearchKeyword = '';
         let collapsedSubjects = new Set();
+        const REVIEW_GROUP_ID = 'review'; // 复习卡组的固定ID
 
         let showdownConverter = null;
 
@@ -579,7 +586,8 @@
             const exportData = {
                 subjects: subjects,
                 groups: groups.map(g => ({ id: g.id, name: g.name, subjectId: g.subjectId })),
-                cards: cards.map(c => ({ id: c.id, groupId: c.groupId, question: c.question, answer: c.answer }))
+                cards: cards.map(c => ({ id: c.id, groupId: c.groupId, question: c.question, answer: c.answer })),
+                reviewCards: reviewCards
             };
             const dataStr = JSON.stringify(exportData, null, 2);
             const blob = new Blob([dataStr], { type: 'application/json' });
@@ -607,6 +615,7 @@
                         if (data.subjects && Array.isArray(data.subjects)) subjects = data.subjects;
                         if (data.groups && Array.isArray(data.groups)) groups = data.groups;
                         if (data.cards && Array.isArray(data.cards)) cards = data.cards;
+                        if (data.reviewCards && Array.isArray(data.reviewCards)) reviewCards = data.reviewCards;
                         // 确保每个 group 都有 subjectId（兼容旧格式）
                         groups.forEach(g => {
                             if (g.subjectId === undefined && subjects.length) {
@@ -640,21 +649,41 @@
             });
         }
 
+        // 增强的 Markdown 渲染，确保表格正确显示
         function renderMarkdown(md) {
             if (!md) return '';
             try {
-                let raw = showdownConverter.makeHtml(md);
-                return DOMPurify.sanitize(raw, {
-                    ALLOWED_TAGS: ['p', 'br', 'strong', 'b', 'em', 'i', 'ul', 'ol', 'li', 'code', 'pre', 'h1', 'h2', 'h3', 'h4', 'blockquote', 'a', 'hr', 'div', 'span', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'img'],
-                    ALLOWED_ATTR: ['href', 'target', 'src', 'alt']
+                // 预处理：确保表格前后有空行（如果内容看起来像表格但缺少换行）
+                let processed = md;
+                // 检测是否包含表格行（以 | 开头或包含 | 的连续行），并在前后添加换行
+                if (processed.includes('|') && (processed.includes('\n|') || processed.includes('|\n'))) {
+                    // 如果表格前不是空行，添加一个换行
+                    if (!processed.match(/(\n\n|\r\n\r\n)\s*\|/)) {
+                        processed = '\n' + processed;
+                    }
+                    // 如果表格后不是空行，添加一个换行
+                    if (!processed.match(/\|\s*(\n\n|\r\n\r\n)/)) {
+                        processed = processed + '\n';
+                    }
+                }
+                let raw = showdownConverter.makeHtml(processed);
+                // 使用 DOMPurify 清洗，允许表格相关标签和属性
+                const clean = DOMPurify.sanitize(raw, {
+                    ALLOWED_TAGS: ['p', 'br', 'strong', 'b', 'em', 'i', 'ul', 'ol', 'li', 'code', 'pre', 'h1', 'h2', 'h3', 'h4', 'blockquote', 'a', 'hr', 'div', 'span', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'img', 'caption'],
+                    ALLOWED_ATTR: ['href', 'target', 'src', 'alt', 'colspan', 'rowspan', 'align', 'class']
                 });
-            } catch (e) { return md; }
+                return clean;
+            } catch (e) {
+                console.warn('Markdown 渲染错误', e);
+                return md;
+            }
         }
 
         function saveData() {
             localStorage.setItem('subjects_data', JSON.stringify(subjects));
             localStorage.setItem('groups_data', JSON.stringify(groups));
             localStorage.setItem('cards_data', JSON.stringify(cards));
+            localStorage.setItem('reviewCards_data', JSON.stringify(reviewCards));
             localStorage.setItem('collapsedSubjects', JSON.stringify([...collapsedSubjects]));
         }
 
@@ -667,6 +696,7 @@
                 if (data.subjects && Array.isArray(data.subjects)) subjects = data.subjects;
                 if (data.groups && Array.isArray(data.groups)) groups = data.groups;
                 if (data.cards && Array.isArray(data.cards)) cards = data.cards;
+                if (data.reviewCards && Array.isArray(data.reviewCards)) reviewCards = data.reviewCards;
                 groups.forEach(g => {
                     if (g.subjectId === undefined && subjects.length) {
                         g.subjectId = subjects[0].id;
@@ -689,11 +719,13 @@
                 const storedSubjects = localStorage.getItem('subjects_data');
                 const storedGroups = localStorage.getItem('groups_data');
                 const storedCards = localStorage.getItem('cards_data');
+                const storedReviewCards = localStorage.getItem('reviewCards_data');
                 const storedCollapsed = localStorage.getItem('collapsedSubjects');
                 if (storedSubjects && storedGroups && storedCards) {
                     subjects = JSON.parse(storedSubjects);
                     groups = JSON.parse(storedGroups);
                     cards = JSON.parse(storedCards);
+                    if (storedReviewCards) reviewCards = JSON.parse(storedReviewCards);
                     if (storedCollapsed) collapsedSubjects = new Set(JSON.parse(storedCollapsed));
                     // 确保旧数据有 subjectId
                     let needSave = false;
@@ -724,7 +756,12 @@
             if (storedCollapsed) collapsedSubjects = new Set(JSON.parse(storedCollapsed));
         }
 
-        function getCardsByGroup(groupId) { return cards.filter(c => Number(c.groupId) === Number(groupId)); }
+        function getCardsByGroup(groupId) {
+            if (groupId === REVIEW_GROUP_ID) {
+                return reviewCards;
+            }
+            return cards.filter(c => Number(c.groupId) === Number(groupId));
+        }
         function getGroupNameById(id) { const g = groups.find(g => Number(g.id) === Number(id)); return g ? g.name : ''; }
         function getSubjectNameById(id) { const s = subjects.find(s => Number(s.id) === Number(id)); return s ? s.name : ''; }
 
@@ -757,6 +794,8 @@
             }
 
             let html = '';
+            
+            // 显示普通科目和卡组
             for (let subj of subjects) {
                 const subjGroups = groupsBySubject.get(subj.id) || [];
                 const isCollapsed = collapsedSubjects.has(subj.id);
@@ -799,25 +838,52 @@
                 }
                 html += `</div></div>`;
             }
+            
+            // 显示复习卡组（放在最下面）
+            const reviewCount = reviewCards.length;
+            const reviewActiveClass = (currentGroupId === REVIEW_GROUP_ID) ? 'active' : '';
+            html += `
+                <div class="subject-container" style="margin-top: 1.5rem;">
+                    <div class="subject-header ${reviewActiveClass}" style="background: #e3f0f9; cursor: pointer;" data-id="${REVIEW_GROUP_ID}">
+                        <div class="subject-title">
+                            <i class="fas fa-star"></i>
+                            <span>⭐ 复习卡组</span>
+                            <span style="font-size:0.7rem; color:#6c8ea0;">(${reviewCount}张卡片)</span>
+                        </div>
+                        <div class="subject-actions">
+                            <button class="clear-review-group" title="清空复习卡组"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
             container.innerHTML = html;
 
-            // 折叠/展开
+            // 折叠/展开和复习卡组点击
             document.querySelectorAll('.subject-header').forEach(header => {
                 header.addEventListener('click', (e) => {
                     if (e.target.closest('.subject-actions')) return;
-                    const subjId = Number(header.dataset.subjectId);
-                    const groupListDiv = header.parentElement.querySelector('.group-list-under-subject');
-                    if (groupListDiv) {
-                        if (collapsedSubjects.has(subjId)) {
-                            collapsedSubjects.delete(subjId);
-                            groupListDiv.classList.remove('collapsed');
-                            header.querySelector('.subject-toggle-icon').classList.replace('fa-chevron-right', 'fa-chevron-down');
-                        } else {
-                            collapsedSubjects.add(subjId);
-                            groupListDiv.classList.add('collapsed');
-                            header.querySelector('.subject-toggle-icon').classList.replace('fa-chevron-down', 'fa-chevron-right');
+                    // 检查是否是复习卡组
+                    const reviewGroupId = header.dataset.id;
+                    if (reviewGroupId === REVIEW_GROUP_ID) {
+                        // 点击复习卡组标题栏，选择复习卡组
+                        selectGroup(reviewGroupId);
+                    } else {
+                        // 普通科目，折叠/展开
+                        const subjId = Number(header.dataset.subjectId);
+                        const groupListDiv = header.parentElement.querySelector('.group-list-under-subject');
+                        if (groupListDiv) {
+                            if (collapsedSubjects.has(subjId)) {
+                                collapsedSubjects.delete(subjId);
+                                groupListDiv.classList.remove('collapsed');
+                                header.querySelector('.subject-toggle-icon').classList.replace('fa-chevron-right', 'fa-chevron-down');
+                            } else {
+                                collapsedSubjects.add(subjId);
+                                groupListDiv.classList.add('collapsed');
+                                header.querySelector('.subject-toggle-icon').classList.replace('fa-chevron-down', 'fa-chevron-right');
+                            }
+                            saveData();
                         }
-                        saveData();
                     }
                 });
             });
@@ -852,12 +918,77 @@
 
             // 卡组点击
             document.querySelectorAll('.group-item').forEach(el => {
-                const id = Number(el.dataset.id);
+                const id = el.dataset.id;
                 el.addEventListener('click', (e) => {
                     if (e.target.closest('.group-actions')) return;
+                    // 选择卡组
                     selectGroup(id);
                 });
             });
+            
+            // 为卡组添加拖放事件
+            document.querySelectorAll('.group-item').forEach(el => {
+                const id = el.dataset.id;
+                // 添加拖放事件
+                el.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    if (id === REVIEW_GROUP_ID) {
+                        el.style.backgroundColor = '#e3f0f9';
+                    }
+                });
+                
+                el.addEventListener('dragleave', (e) => {
+                    e.preventDefault();
+                    el.style.backgroundColor = '';
+                });
+                
+                el.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    el.style.backgroundColor = '';
+                    if (id === REVIEW_GROUP_ID) {
+                        const cardId = Number(e.dataTransfer.getData('text/plain'));
+                        const card = cards.find(c => c.id === cardId);
+                        if (card) {
+                            // 检查是否已经在复习卡组中
+                            if (!reviewCards.some(c => c.originalCardId === cardId)) {
+                                const reviewCard = {
+                                    id: Date.now(),
+                                    originalCardId: cardId,
+                                    originalGroupId: card.groupId,
+                                    question: card.question,
+                                    answer: card.answer
+                                };
+                                reviewCards.push(reviewCard);
+                                saveData();
+                                renderGroupsSidebar();
+                                showToast('卡片已添加到复习卡组');
+                            } else {
+                                showToast('卡片已在复习卡组中', true);
+                            }
+                        }
+                    }
+                });
+            });
+            
+            // 绑定复习卡组的清空按钮事件
+            document.querySelectorAll('.clear-review-group').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (confirm('确定要清空复习卡组吗？')) {
+                        reviewCards = [];
+                        saveData();
+                        renderGroupsSidebar();
+                        // 如果当前在某个卡组页面，更新星星图标
+                        if (currentGroupId) {
+                            renderCardsOfGroup();
+                        }
+                        showToast('复习卡组已清空');
+                    }
+                });
+            });
+            
+
+            
             document.querySelectorAll('.edit-group').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     e.stopPropagation();
@@ -867,6 +998,7 @@
                     openEditGroupModal(id, name, subjectId);
                 });
             });
+            
             document.querySelectorAll('.delete-group').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     e.stopPropagation();
@@ -931,12 +1063,16 @@
             currentGroupId = groupId;
             renderGroupsSidebar();
             renderCardsOfGroup();
-            const group = groups.find(g => Number(g.id) === Number(groupId));
-            if (group) {
-                const subject = subjects.find(s => Number(s.id) === Number(group.subjectId));
-                document.getElementById('currentGroupTitle').innerHTML = `<i class="fas fa-folder-open"></i> ${escapeHtml(subject ? subject.name + ' / ' : '')}${escapeHtml(group.name)}`;
+            if (groupId === REVIEW_GROUP_ID) {
+                document.getElementById('currentGroupTitle').innerHTML = '<i class="fas fa-star"></i> 复习卡组';
             } else {
-                document.getElementById('currentGroupTitle').innerHTML = '卡组';
+                const group = groups.find(g => Number(g.id) === Number(groupId));
+                if (group) {
+                    const subject = subjects.find(s => Number(s.id) === Number(group.subjectId));
+                    document.getElementById('currentGroupTitle').innerHTML = `<i class="fas fa-folder-open"></i> ${escapeHtml(subject ? subject.name + ' / ' : '')}${escapeHtml(group.name)}`;
+                } else {
+                    document.getElementById('currentGroupTitle').innerHTML = '卡组';
+                }
             }
             document.getElementById('groupToolbar').style.display = 'flex';
         }
@@ -948,48 +1084,154 @@
                 container.innerHTML = '<div class="empty-placeholder">👈 请从左侧选择一个卡组</div>';
                 return;
             }
-            let groupCards = getCardsByGroup(currentGroupId);
+            
+            let groupCards = [];
+            if (currentGroupId === REVIEW_GROUP_ID) {
+                // 显示复习卡组的卡片
+                groupCards = reviewCards;
+            } else {
+                // 显示普通卡组的卡片
+                groupCards = getCardsByGroup(currentGroupId);
+            }
+            
             if (cardSearchKeyword) {
                 groupCards = groupCards.filter(card => {
                     const keyword = cardSearchKeyword.toLowerCase();
                     return card.question.toLowerCase().includes(keyword) || card.answer.toLowerCase().includes(keyword);
                 });
             }
+            
             if (!groupCards.length) {
                 container.innerHTML = '<div class="empty-placeholder">' + (cardSearchKeyword ? '未找到匹配的卡片' : '📭 该卡组暂无卡片，点击「新增卡片」添加') + '</div>';
                 return;
             }
+            
             let html = '';
             groupCards.forEach(card => {
                 const shortAns = card.answer.length > 70 ? card.answer.substring(0, 70) + '…' : card.answer;
                 html += `
-                <div class="card-item" data-card-id="${card.id}">
+                <div class="card-item" data-card-id="${card.id}" draggable="${currentGroupId !== REVIEW_GROUP_ID}">
                     <div class="card-preview">
                         <div class="card-question">❓ ${escapeHtml(card.question)}</div>
                         <div class="card-answer-preview">📖 ${escapeHtml(shortAns)}</div>
                     </div>
                     <div class="card-actions">
-                        <button class="edit-card-btn" data-id="${card.id}" data-question="${escapeHtml(card.question)}" data-answer="${escapeHtml(card.answer)}"><i class="fas fa-edit"></i> 编辑</button>
-                        <button class="delete-card-btn" data-id="${card.id}"><i class="fas fa-trash"></i> 删除</button>
-                        <button class="study-single-card" data-id="${card.id}"><i class="fas fa-play"></i> 学习</button>
+                        ${currentGroupId === REVIEW_GROUP_ID ? 
+                            `<button class="remove-review-card-btn" data-id="${card.id}"><i class="fas fa-times"></i> 移除</button>` : 
+                            `<button class="edit-card-btn" data-id="${card.id}" data-question="${escapeHtml(card.question)}" data-answer="${escapeHtml(card.answer)}"><i class="fas fa-edit"></i> 编辑</button>
+                            <button class="delete-card-btn" data-id="${card.id}"><i class="fas fa-trash"></i> 删除</button>
+                            <button class="add-to-review-btn" data-id="${card.id}"><i class="fas ${reviewCards.some(c => c.originalCardId === card.id) ? 'fa-star' : 'fa-star-o'}" style="${reviewCards.some(c => c.originalCardId === card.id) ? 'color: #ffc107;' : ''}"></i> 加入复习</button>`
+                        }
                     </div>
                 </div>
             `;
             });
+            
             container.innerHTML = html;
+            
+            if (currentGroupId === REVIEW_GROUP_ID) {
+                // 绑定复习卡组卡片的移除事件
+                document.querySelectorAll('.remove-review-card-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const cardId = Number(btn.dataset.id);
+                        if (confirm('确定要从复习卡组移除这张卡片吗？')) {
+                            reviewCards = reviewCards.filter(c => c.id !== cardId);
+                            saveData();
+                            renderCardsOfGroup();
+                            renderGroupsSidebar();
+                            // 如果当前不在复习卡组页面，也需要更新原卡组的星星图标
+                            if (currentGroupId !== REVIEW_GROUP_ID) {
+                                renderCardsOfGroup();
+                            }
+                            showToast('卡片已从复习卡组移除');
+                        }
+                    });
+                });
+            } else {
+                // 绑定普通卡组卡片的编辑和删除事件
+                document.querySelectorAll('.edit-card-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => { e.stopPropagation(); openCardEditModal(Number(btn.dataset.id), btn.dataset.question, btn.dataset.answer); });
+                });
+
+                document.querySelectorAll('.delete-card-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const cardId = Number(btn.dataset.id);
+                        if (confirm('确定要删除这张卡片吗？')) {
+                            cards = cards.filter(c => c.id !== cardId);
+                            // 同时从复习卡组中移除
+                            reviewCards = reviewCards.filter(c => c.originalCardId !== cardId);
+                            saveData();
+                            renderCardsOfGroup();
+                            renderGroupsSidebar();
+                            showToast('卡片已删除');
+                        }
+                    });
+                });
+
+                // 绑定添加到复习卡组的事件
+                document.querySelectorAll('.add-to-review-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const cardId = Number(btn.dataset.id);
+                        const card = cards.find(c => c.id === cardId);
+                        if (card) {
+                            // 检查是否已经在复习卡组中
+                            if (!reviewCards.some(c => c.originalCardId === cardId)) {
+                                const reviewCard = {
+                                    id: Date.now(),
+                                    originalCardId: cardId,
+                                    originalGroupId: currentGroupId,
+                                    question: card.question,
+                                    answer: card.answer
+                                };
+                                reviewCards.push(reviewCard);
+                                saveData();
+                                renderGroupsSidebar();
+                                renderCardsOfGroup(); // 重新渲染卡片列表，更新星星图标
+                                showToast('卡片已添加到复习卡组');
+                            } else {
+                                showToast('卡片已在复习卡组中', true);
+                            }
+                        }
+                    });
+                });
+            }
+            
+            // 绑定卡片点击事件（学习）
             document.querySelectorAll('.card-item').forEach(cardEl => {
                 const cardId = Number(cardEl.dataset.cardId);
-                cardEl.addEventListener('click', (e) => { if (!e.target.closest('.card-actions')) { const targetCard = cards.find(c => Number(c.id) === cardId); if (targetCard) startStudyModeWithCard(targetCard); } });
+                cardEl.addEventListener('click', (e) => {
+                    if (!e.target.closest('.card-actions')) {
+                        let targetCard;
+                        if (currentGroupId === REVIEW_GROUP_ID) {
+                            targetCard = reviewCards.find(c => c.id === cardId);
+                        } else {
+                            targetCard = cards.find(c => c.id === cardId);
+                        }
+                        if (targetCard) {
+                            startStudyModeWithCard(targetCard);
+                        }
+                    }
+                });
             });
-            document.querySelectorAll('.edit-card-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => { e.stopPropagation(); openCardEditModal(Number(btn.dataset.id), btn.dataset.question, btn.dataset.answer); });
-            });
-            document.querySelectorAll('.delete-card-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => { e.stopPropagation(); deleteCardById(Number(btn.dataset.id)); });
-            });
-            document.querySelectorAll('.study-single-card').forEach(btn => {
-                btn.addEventListener('click', (e) => { e.stopPropagation(); const targetCard = cards.find(c => Number(c.id) === Number(btn.dataset.id)); if (targetCard) startStudyModeWithCard(targetCard); });
-            });
+            
+
+            
+            // 绑定拖拽事件
+            if (currentGroupId !== REVIEW_GROUP_ID) {
+                document.querySelectorAll('.card-item').forEach(cardItem => {
+                    cardItem.addEventListener('dragstart', (e) => {
+                        e.dataTransfer.setData('text/plain', cardItem.dataset.cardId);
+                        cardItem.style.opacity = '0.5';
+                    });
+
+                    cardItem.addEventListener('dragend', (e) => {
+                        cardItem.style.opacity = '1';
+                    });
+                });
+            }
         }
 
         // 卡组操作
@@ -1107,9 +1349,17 @@
         
         function startStudyModeWithCard(initialCard) {
             if (!initialCard) return;
-            const group = groups.find(g => Number(g.id) === Number(initialCard.groupId));
-            if (!group) return;
-            currentStudyGroupId = group.id;
+            let groupId;
+            if (initialCard.originalGroupId) {
+                // 复习卡组的卡片
+                groupId = REVIEW_GROUP_ID;
+            } else {
+                // 普通卡组的卡片
+                const group = groups.find(g => Number(g.id) === Number(initialCard.groupId));
+                if (!group) return;
+                groupId = group.id;
+            }
+            currentStudyGroupId = groupId;
             currentStudyCard = { ...initialCard };
             studyAnswerVisible = false;
             studyModeActive = true;
@@ -1132,14 +1382,20 @@
         let handleKeyDown = null;
         function renderStudyModeView() {
             const mainDiv = document.getElementById('mainContent');
-            const group = groups.find(g => Number(g.id) === Number(currentStudyGroupId));
-            const subject = subjects.find(s => Number(s.id) === Number(group?.subjectId));
+            let groupName = '';
+            if (currentStudyGroupId === REVIEW_GROUP_ID) {
+                groupName = '复习卡组';
+            } else {
+                const group = groups.find(g => Number(g.id) === Number(currentStudyGroupId));
+                const subject = subjects.find(s => Number(s.id) === Number(group?.subjectId));
+                groupName = `${escapeHtml(subject ? subject.name + ' / ' : '')}${escapeHtml(group?.name || '')}`;
+            }
             const unmasteredCount = getUnmasteredCards(currentStudyGroupId).length;
             const totalCount = getCardsByGroup(currentStudyGroupId).length;
             const masteredCount = totalCount - unmasteredCount;
             const answerHtml = renderMarkdown(currentStudyCard.answer);
             const answerClass = studyAnswerVisible ? 'show' : '';
-            const studyHtml = `<div class="study-view" id="studyView"><div class="back-link" id="exitStudyBtn"><i class="fas fa-arrow-left"></i> 返回卡组列表</div><div class="study-card-container"><div class="study-card-header"><span><i class="fas fa-layer-group"></i> ${escapeHtml(subject ? subject.name + ' / ' : '')}${escapeHtml(group.name)}</span><span>📊 已掌握 ${masteredCount} / ${totalCount}</span><button id="editCurrentCardBtn" class="btn-icon"><i class="fas fa-pen"></i> 编辑卡片</button></div><div class="study-body" id="studyBodyClick"><div class="study-question">${escapeHtml(currentStudyCard.question)}</div><div class="study-answer ${answerClass}" id="studyAnswerArea"><div class="answer-markdown">${answerHtml}</div></div><div style="text-align:center; margin-top:1rem; font-size:0.8rem; color:#7f9eb5;">👇 点击卡片任意位置显示答案 | ⌨️ 空格键显示/隐藏答案 | 回车键切换卡片</div></div><div class="study-footer"><button id="randomCardBtn" class="btn-icon"><i class="fas fa-random"></i> 随机抽卡</button><div class="memory-buttons"><button id="rememberBtn" class="btn-memory btn-remember"><i class="fas fa-check-circle"></i> 记住了 (不再出现)</button><button id="forgetBtn" class="btn-memory btn-forget"><i class="fas fa-redo-alt"></i> 没记住 (继续出现)</button></div></div></div></div>`;
+            const studyHtml = `<div class="study-view" id="studyView"><div class="back-link" id="exitStudyBtn"><i class="fas fa-arrow-left"></i> 返回卡组列表</div><div class="study-card-container"><div class="study-card-header"><span><i class="fas fa-layer-group"></i> ${groupName}</span><span>📊 已掌握 ${masteredCount} / ${totalCount}</span><button id="editCurrentCardBtn" class="btn-icon"><i class="fas fa-pen"></i> 编辑卡片</button></div><div class="study-body" id="studyBodyClick"><div class="study-question">${escapeHtml(currentStudyCard.question)}</div><div class="study-answer ${answerClass}" id="studyAnswerArea"><div class="answer-markdown">${answerHtml}</div></div></div><div class="study-footer"><div style="text-align:center; margin-bottom: 15px; font-size:0.8rem; color:#7f9eb5;">👇 点击卡片任意位置显示答案 | ⌨️ 空格键显示/隐藏答案 | 回车键随机切换卡片 | ←→ 键上一页/下一页 | R键记住了 | F键没记住</div><div style="display: flex; gap: 10px; margin-bottom: 15px;"><button id="prevCardBtn" class="btn-icon"><i class="fas fa-chevron-left"></i> 上一页</button><button id="randomCardBtn" class="btn-icon"><i class="fas fa-random"></i> 随机抽卡</button><button id="nextCardBtn" class="btn-icon"><i class="fas fa-chevron-right"></i> 下一页</button></div><div class="memory-buttons"><button id="rememberBtn" class="btn-memory btn-remember"><i class="fas fa-check-circle"></i> 记住了 (不再出现)</button><button id="forgetBtn" class="btn-memory btn-forget"><i class="fas fa-redo-alt"></i> 没记住 (继续出现)</button></div></div></div></div>`;
             mainDiv.innerHTML = studyHtml;
             if (handleKeyDown) document.removeEventListener('keydown', handleKeyDown);
             handleKeyDown = (e) => {
@@ -1170,6 +1426,78 @@
                     studyAnswerVisible = false;
                     renderStudyModeView();
                 }
+                if (e.code === 'ArrowLeft') {
+                    e.preventDefault();
+                    const unmastered = getUnmasteredCards(currentStudyGroupId);
+                    if (unmastered.length === 0) {
+                        if (getUnmasteredCards(currentStudyGroupId).length === 0) {
+                            showToast("🎉 恭喜！你已经掌握了当前卡组的所有卡片！");
+                            if (confirm("所有卡片已掌握，是否重置本组记忆状态？")) {
+                                masteredCardsMap.set(Number(currentStudyGroupId), new Set());
+                                const newCard = getRandomUnmasteredCard(currentStudyGroupId);
+                                if (newCard) { currentStudyCard = newCard; studyAnswerVisible = false; renderStudyModeView(); }
+                                else exitStudyMode();
+                            }
+                        } else showToast("暂无可抽卡片", true);
+                        return;
+                    }
+                    const currentIndex = unmastered.findIndex(c => Number(c.id) === Number(currentStudyCard.id));
+                    const prevIndex = (currentIndex - 1 + unmastered.length) % unmastered.length;
+                    currentStudyCard = unmastered[prevIndex];
+                    studyAnswerVisible = false;
+                    renderStudyModeView();
+                }
+                if (e.code === 'ArrowRight') {
+                    e.preventDefault();
+                    const unmastered = getUnmasteredCards(currentStudyGroupId);
+                    if (unmastered.length === 0) {
+                        if (getUnmasteredCards(currentStudyGroupId).length === 0) {
+                            showToast("🎉 恭喜！你已经掌握了当前卡组的所有卡片！");
+                            if (confirm("所有卡片已掌握，是否重置本组记忆状态？")) {
+                                masteredCardsMap.set(Number(currentStudyGroupId), new Set());
+                                const newCard = getRandomUnmasteredCard(currentStudyGroupId);
+                                if (newCard) { currentStudyCard = newCard; studyAnswerVisible = false; renderStudyModeView(); }
+                                else exitStudyMode();
+                            }
+                        } else showToast("暂无可抽卡片", true);
+                        return;
+                    }
+                    const currentIndex = unmastered.findIndex(c => Number(c.id) === Number(currentStudyCard.id));
+                    const nextIndex = (currentIndex + 1) % unmastered.length;
+                    currentStudyCard = unmastered[nextIndex];
+                    studyAnswerVisible = false;
+                    renderStudyModeView();
+                }
+                if (e.code === 'KeyR') {
+                    e.preventDefault();
+                    getMasteredSet(currentStudyGroupId).add(Number(currentStudyCard.id));
+                    const nextCard = getRandomUnmasteredCard(currentStudyGroupId);
+                    if (!nextCard) {
+                        showToast("🎉 完美！所有卡片已掌握！重置记忆可继续学习。");
+                        if (confirm("本卡组所有卡片已掌握，是否重置记忆重新学习？")) {
+                            masteredCardsMap.set(Number(currentStudyGroupId), new Set());
+                            const freshCard = getRandomUnmasteredCard(currentStudyGroupId);
+                            if (freshCard) { currentStudyCard = freshCard; studyAnswerVisible = false; renderStudyModeView(); }
+                            else exitStudyMode();
+                        } else exitStudyMode();
+                        return;
+                    }
+                    currentStudyCard = nextCard;
+                    studyAnswerVisible = false;
+                    renderStudyModeView();
+                }
+                if (e.code === 'KeyF') {
+                    e.preventDefault();
+                    const masteredSet = getMasteredSet(currentStudyGroupId);
+                    if (masteredSet.has(Number(currentStudyCard.id))) masteredSet.delete(Number(currentStudyCard.id));
+                    const unmastered = getUnmasteredCards(currentStudyGroupId);
+                    if (unmastered.length === 0) {
+                        const anyCard = getCardsByGroup(currentStudyGroupId)[0];
+                        if (anyCard) currentStudyCard = anyCard;
+                    } else currentStudyCard = unmastered[Math.floor(Math.random() * unmastered.length)];
+                    studyAnswerVisible = false;
+                    renderStudyModeView();
+                }
             };
             document.addEventListener('keydown', handleKeyDown);
             document.getElementById('studyBodyClick')?.addEventListener('click', () => {
@@ -1179,6 +1507,26 @@
             });
             document.getElementById('exitStudyBtn')?.addEventListener('click', () => exitStudyMode());
             document.getElementById('editCurrentCardBtn')?.addEventListener('click', (e) => { e.stopPropagation(); openCardEditModal(currentStudyCard.id, currentStudyCard.question, currentStudyCard.answer); });
+            document.getElementById('prevCardBtn')?.addEventListener('click', () => {
+                const unmastered = getUnmasteredCards(currentStudyGroupId);
+                if (unmastered.length === 0) {
+                    if (getUnmasteredCards(currentStudyGroupId).length === 0) {
+                        showToast("🎉 恭喜！你已经掌握了当前卡组的所有卡片！");
+                        if (confirm("所有卡片已掌握，是否重置本组记忆状态？")) {
+                            masteredCardsMap.set(Number(currentStudyGroupId), new Set());
+                            const newCard = getRandomUnmasteredCard(currentStudyGroupId);
+                            if (newCard) { currentStudyCard = newCard; studyAnswerVisible = false; renderStudyModeView(); }
+                            else exitStudyMode();
+                        }
+                    } else showToast("暂无可抽卡片", true);
+                    return;
+                }
+                const currentIndex = unmastered.findIndex(c => Number(c.id) === Number(currentStudyCard.id));
+                const prevIndex = (currentIndex - 1 + unmastered.length) % unmastered.length;
+                currentStudyCard = unmastered[prevIndex];
+                studyAnswerVisible = false;
+                renderStudyModeView();
+            });
             document.getElementById('randomCardBtn')?.addEventListener('click', () => {
                 const nextCard = getRandomUnmasteredCard(currentStudyGroupId);
                 if (!nextCard) {
@@ -1194,6 +1542,26 @@
                     return;
                 }
                 currentStudyCard = nextCard;
+                studyAnswerVisible = false;
+                renderStudyModeView();
+            });
+            document.getElementById('nextCardBtn')?.addEventListener('click', () => {
+                const unmastered = getUnmasteredCards(currentStudyGroupId);
+                if (unmastered.length === 0) {
+                    if (getUnmasteredCards(currentStudyGroupId).length === 0) {
+                        showToast("🎉 恭喜！你已经掌握了当前卡组的所有卡片！");
+                        if (confirm("所有卡片已掌握，是否重置本组记忆状态？")) {
+                            masteredCardsMap.set(Number(currentStudyGroupId), new Set());
+                            const newCard = getRandomUnmasteredCard(currentStudyGroupId);
+                            if (newCard) { currentStudyCard = newCard; studyAnswerVisible = false; renderStudyModeView(); }
+                            else exitStudyMode();
+                        }
+                    } else showToast("暂无可抽卡片", true);
+                    return;
+                }
+                const currentIndex = unmastered.findIndex(c => Number(c.id) === Number(currentStudyCard.id));
+                const nextIndex = (currentIndex + 1) % unmastered.length;
+                currentStudyCard = unmastered[nextIndex];
                 studyAnswerVisible = false;
                 renderStudyModeView();
             });
@@ -1240,12 +1608,16 @@
             let header = document.getElementById('contentHeader');
             let cardsContainer = document.getElementById('cardsListContainer');
             if (!header || !cardsContainer) {
-                mainDiv.innerHTML = `<div class="content-header" id="contentHeader"><div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;"><h3 id="currentGroupTitle">选择一个卡组</h3><div style="position: relative; flex: 1; max-width: 300px;"><input type="text" id="cardSearchInput" placeholder="搜索卡片..." style="width: 100%; padding: 0.6rem 1rem; border-radius: 2rem; border: 1px solid #cde0ea; font-size: 0.9rem;" /></div></div><div class="toolbar-buttons" id="groupToolbar" style="display: none;"><button class="btn-icon" id="addCardBtn"><i class="fas fa-plus"></i> 新增卡片</button><button class="btn-icon" id="downloadTemplateBtn"><i class="fas fa-download"></i> 下载模版</button><button class="btn-icon" id="importExcelBtn"><i class="fas fa-upload"></i> 导入Excel</button><button class="btn-icon" id="exportExcelBtn"><i class="fas fa-file-excel"></i> 导出Excel</button><button class="btn-icon btn-primary" id="startStudyBtn"><i class="fas fa-graduation-cap"></i> 开始学习</button></div></div><div id="cardsListContainer" class="cards-grid"></div>`;
+                mainDiv.innerHTML = `<div class="content-header" id="contentHeader"><div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;"><h3 id="currentGroupTitle">选择一个卡组</h3><div style="position: relative; flex: 1; max-width: 300px;"><input type="text" id="cardSearchInput" placeholder="搜索卡片..." style="width: 100%; padding: 0.6rem 1rem; border-radius: 2rem; border: 1px solid #cde0ea; font-size: 0.9rem;" /></div></div><div class="toolbar-buttons" id="groupToolbar" style="display: none;"><button class="btn-icon" id="addCardBtn"><i class="fas fa-plus"></i> 新增卡片</button><button class="btn-icon" id="downloadTemplateBtn"><i class="fas fa-download"></i> 下载模版</button><button class="btn-icon" id="importExcelBtn"><i class="fas fa-upload"></i> 导入Excel</button><button class="btn-icon" id="exportExcelBtn"><i class="fas fa-file-excel"></i> 导出Excel</button><button class="btn-icon" id="loadJsonBtn"><i class="fas fa-file-import"></i> 加载JSON</button><button class="btn-icon" id="exportJsonBtn"><i class="fas fa-file-code"></i> 导出JSON</button><button class="btn-icon btn-primary" id="startStudyBtn"><i class="fas fa-graduation-cap"></i> 开始学习</button></div></div><div id="cardsListContainer" class="cards-grid"></div>`;
             }
             if (currentGroupId) {
-                const group = groups.find(g => Number(g.id) === Number(currentGroupId));
-                const subject = subjects.find(s => Number(s.id) === Number(group?.subjectId));
-                document.getElementById('currentGroupTitle').innerHTML = `<i class="fas fa-folder-open"></i> ${escapeHtml(subject ? subject.name + ' / ' : '')}${escapeHtml(group?.name || '卡组')}`;
+                if (currentGroupId === REVIEW_GROUP_ID) {
+                    document.getElementById('currentGroupTitle').innerHTML = '<i class="fas fa-star"></i> 复习卡组';
+                } else {
+                    const group = groups.find(g => Number(g.id) === Number(currentGroupId));
+                    const subject = subjects.find(s => Number(s.id) === Number(group?.subjectId));
+                    document.getElementById('currentGroupTitle').innerHTML = `<i class="fas fa-folder-open"></i> ${escapeHtml(subject ? subject.name + ' / ' : '')}${escapeHtml(group?.name || '卡组')}`;
+                }
                 document.getElementById('groupToolbar').style.display = 'flex';
                 renderCardsOfGroup();
             } else {
