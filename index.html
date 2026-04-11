@@ -12,6 +12,7 @@
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, 'Segoe UI', 'Roboto', sans-serif; }
         body { background: #eef2f7; height: 100vh; overflow: hidden; }
         .app-layout { display: flex; height: 100vh; width: 100%; }
+        /* 左侧卡组侧边栏 */
         .groups-sidebar {
             width: 280px;
             background: #ffffff;
@@ -46,6 +47,7 @@
         .group-actions button { background: transparent; border: none; cursor: pointer; color: #7f9ab0; font-size: 0.8rem; padding: 4px; border-radius: 30px; }
         .group-actions button:hover { background: #dce9f2; color: #2c5a7a; }
         .add-group-btn { margin: 1rem; background: #2c7aa0; color: white; border: none; border-radius: 2rem; padding: 0.6rem; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        /* 右侧主区域 */
         .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: #f5f9fe; position: relative; }
         .content-header { background: white; padding: 0.8rem 2rem; border-bottom: 1px solid #e2ecf3; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
         .toolbar-buttons { display: flex; gap: 10px; }
@@ -70,7 +72,8 @@
         .card-actions { display: flex; justify-content: flex-end; gap: 12px; padding: 0.5rem 1rem; border-top: 1px solid #ecf3f8; background: white; }
         .card-actions button { background: transparent; border: none; cursor: pointer; font-size: 0.8rem; padding: 4px 8px; border-radius: 20px; transition: 0.1s; }
         .card-actions button:hover { background: #eef2f8; }
-        .study-view { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: #f0f5fa; z-index: 20; display: flex; flex-direction: column; padding: 2rem; overflow-y: auto; }
+        /* 学习模式视图 - 固定尺寸，无抖动 */
+        .study-view { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: #f0f5fa; z-index: 20; display: flex; flex-direction: column; padding: 2rem; overflow-y: auto; pointer-events: auto; }
         .study-card-container { 
             max-width: 900px; 
             width: 100%;
@@ -79,7 +82,7 @@
             border-radius: 2rem; 
             box-shadow: 0 25px 40px -12px rgba(0,0,0,0.2); 
             overflow: hidden; 
-            height: 650px;
+            height: 650px; /* 固定高度，防止抖动 */
             display: flex;
             flex-direction: column;
         }
@@ -111,6 +114,7 @@
         .study-question { font-size: 1.5rem; font-weight: 600; color: #1b2f3c; line-height: 1.4; margin-bottom: 1rem; }
         .study-answer { margin-top: 1.5rem; padding-top: 1.2rem; border-top: 2px dashed #cde3ef; display: none; }
         .study-answer.show { display: block; }
+        /* Markdown 样式 */
         .answer-markdown { line-height: 1.6; }
         .answer-markdown h1, .answer-markdown h2, .answer-markdown h3, .answer-markdown h4 { margin: 1rem 0 0.5rem; color: #1f4b64; }
         .answer-markdown p { margin-bottom: 1rem; }
@@ -122,6 +126,7 @@
         .answer-markdown blockquote { border-left: 4px solid #2c7aa0; padding-left: 1rem; margin: 1rem 0; color: #4b6f88; }
         .answer-markdown a { color: #2c7aa0; text-decoration: none; }
         .answer-markdown a:hover { text-decoration: underline; }
+        /* 表格样式 */
         .answer-markdown table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
         .answer-markdown th, .answer-markdown td { padding: 0.6rem; border: 1px solid #e9f0f5; text-align: left; }
         .answer-markdown th { background: #f8fafd; font-weight: 600; color: #1f4b64; }
@@ -131,7 +136,7 @@
         .btn-remember { background: #2c7a4d; color: white; }
         .btn-forget { background: #b85c3a; color: white; }
         .empty-placeholder { text-align: center; padding: 3rem; color: #6c8ea0; }
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); justify-content: center; align-items: center; z-index: 1000; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); justify-content: center; align-items: center; z-index: 1000; pointer-events: auto; }
         .modal-content { background: white; width: 90%; max-width: 550px; border-radius: 1.5rem; padding: 1.8rem; }
         .form-group { margin-bottom: 1rem; }
         input, textarea { width: 100%; padding: 0.7rem; border-radius: 1rem; border: 1px solid #cbdde6; }
@@ -143,7 +148,9 @@
 <div class="app-layout">
     <div class="groups-sidebar">
         <div class="sidebar-header"><h2><i class="fas fa-layer-group"></i> 我的卡组</h2></div>
-        <div class="search-box"><input type="text" id="groupSearchInput" placeholder="搜索卡组..." /></div>
+        <div class="search-box">
+            <input type="text" id="groupSearchInput" placeholder="搜索卡组..." />
+        </div>
         <div class="group-list" id="groupListContainer"></div>
         <button class="add-group-btn" id="sidebarAddGroupBtn"><i class="fas fa-plus"></i> 新建卡组</button>
     </div>
@@ -172,7 +179,7 @@
     let groups = [];
     let cards = [];
     let currentGroupId = null;
-    let masteredCardsMap = new Map();
+    let masteredCardsMap = new Map(); // groupId -> Set(cardIds)
     let studyModeActive = false;
     let currentStudyGroupId = null;
     let currentStudyCard = null;
@@ -181,7 +188,6 @@
     let cardSearchKeyword = '';
     
     let showdownConverter = null;
-    let currentEditCardId = null; // 用于编辑模态框
     
     function showToast(msg, isErr = false) {
         const toast = document.getElementById('toastMsg');
@@ -193,8 +199,12 @@
     
     function initMarkdown() {
         showdownConverter = new showdown.Converter({ 
-            simplifiedAutoLink: true, tasklists: true, ghCodeBlocks: true,
-            tables: true, strikethrough: true, underline: true
+            simplifiedAutoLink: true, 
+            tasklists: true, 
+            ghCodeBlocks: true,
+            tables: true,
+            strikethrough: true,
+            underline: true
         });
     }
     
@@ -233,27 +243,64 @@
     function getCardsByGroup(groupId) { return cards.filter(c => Number(c.groupId) === Number(groupId)); }
     function getGroupNameById(id) { const g = groups.find(g => Number(g.id) === Number(id)); return g ? g.name : ''; }
     
+    // 渲染左侧卡组列表
     function renderGroupsSidebar() {
         const container = document.getElementById('groupListContainer');
         if (!container) return;
+        
+        // 过滤卡组
         const filteredGroups = groups.filter(group => {
             if (!groupSearchKeyword) return true;
             return group.name.toLowerCase().includes(groupSearchKeyword.toLowerCase());
         });
+        
         if (!filteredGroups.length) {
-            container.innerHTML = '<div style="padding:1rem; text-align:center;">' + (groupSearchKeyword ? '未找到匹配的卡组' : '暂无卡组，点击下方新建') + '</div>';
+            container.innerHTML = '<div style="padding:1rem; text-align:center;">' + 
+                (groupSearchKeyword ? '未找到匹配的卡组' : '暂无卡组，点击下方新建') + '</div>';
             return;
         }
+        
         let html = '';
         filteredGroups.forEach(group => {
             const count = getCardsByGroup(group.id).length;
             const activeClass = (Number(currentGroupId) === Number(group.id)) ? 'active' : '';
-            html += `<div class="group-item ${activeClass}" data-id="${group.id}"><div class="group-info"><div class="group-name">📁 ${escapeHtml(group.name)}</div><div class="group-count">${count} 张卡片</div></div><div class="group-actions"><button class="edit-group" data-id="${group.id}" data-name="${escapeHtml(group.name)}"><i class="fas fa-edit"></i></button><button class="delete-group" data-id="${group.id}"><i class="fas fa-trash"></i></button></div></div>`;
+            html += `
+                <div class="group-item ${activeClass}" data-id="${group.id}">
+                    <div class="group-info">
+                        <div class="group-name">📁 ${escapeHtml(group.name)}</div>
+                        <div class="group-count">${count} 张卡片</div>
+                    </div>
+                    <div class="group-actions">
+                        <button class="edit-group" data-id="${group.id}" data-name="${escapeHtml(group.name)}"><i class="fas fa-edit"></i></button>
+                        <button class="delete-group" data-id="${group.id}"><i class="fas fa-trash"></i></button>
+                    </div>
+                </div>
+            `;
         });
         container.innerHTML = html;
-        document.querySelectorAll('.group-item').forEach(el => { const id = Number(el.dataset.id); el.addEventListener('click', (e) => { if (e.target.closest('.edit-group') || e.target.closest('.delete-group')) return; selectGroup(id); }); });
-        document.querySelectorAll('.edit-group').forEach(btn => { btn.addEventListener('click', (e) => { e.stopPropagation(); const id = Number(btn.dataset.id); const oldName = btn.dataset.name; openEditGroupModal(id, oldName); }); });
-        document.querySelectorAll('.delete-group').forEach(btn => { btn.addEventListener('click', (e) => { e.stopPropagation(); const id = Number(btn.dataset.id); deleteGroupById(id); }); });
+        // 绑定点击选中卡组
+        document.querySelectorAll('.group-item').forEach(el => {
+            const id = Number(el.dataset.id);
+            el.addEventListener('click', (e) => {
+                if (e.target.closest('.edit-group') || e.target.closest('.delete-group')) return;
+                selectGroup(id);
+            });
+        });
+        document.querySelectorAll('.edit-group').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const id = Number(btn.dataset.id);
+                const oldName = btn.dataset.name;
+                openEditGroupModal(id, oldName);
+            });
+        });
+        document.querySelectorAll('.delete-group').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const id = Number(btn.dataset.id);
+                deleteGroupById(id);
+            });
+        });
     }
     
     function selectGroup(groupId) {
@@ -267,70 +314,140 @@
     
     function renderCardsOfGroup() {
         const container = document.getElementById('cardsListContainer');
-        if (!currentGroupId) { container.innerHTML = '<div class="empty-placeholder">👈 请从左侧选择一个卡组</div>'; return; }
-        let groupCards = getCardsByGroup(currentGroupId);
-        if (cardSearchKeyword) {
-            groupCards = groupCards.filter(card => card.question.toLowerCase().includes(cardSearchKeyword.toLowerCase()) || card.answer.toLowerCase().includes(cardSearchKeyword.toLowerCase()));
+        if (!currentGroupId) {
+            container.innerHTML = '<div class="empty-placeholder">👈 请从左侧选择一个卡组</div>';
+            return;
         }
-        if (!groupCards.length) { container.innerHTML = '<div class="empty-placeholder">' + (cardSearchKeyword ? '未找到匹配的卡片' : '📭 该卡组暂无卡片，点击「新增卡片」添加') + '</div>'; return; }
+        let groupCards = getCardsByGroup(currentGroupId);
+        
+        // 过滤卡片
+        if (cardSearchKeyword) {
+            groupCards = groupCards.filter(card => {
+                const keyword = cardSearchKeyword.toLowerCase();
+                return card.question.toLowerCase().includes(keyword) || 
+                       card.answer.toLowerCase().includes(keyword);
+            });
+        }
+        
+        if (!groupCards.length) {
+            container.innerHTML = '<div class="empty-placeholder">' + 
+                (cardSearchKeyword ? '未找到匹配的卡片' : '📭 该卡组暂无卡片，点击「新增卡片」添加') + '</div>';
+            return;
+        }
         let html = '';
         groupCards.forEach(card => {
             const shortAns = card.answer.length > 70 ? card.answer.substring(0,70)+'…' : card.answer;
-            html += `<div class="card-item" data-card-id="${card.id}"><div class="card-preview"><div class="card-question">❓ ${escapeHtml(card.question)}</div><div class="card-answer-preview">📖 ${escapeHtml(shortAns)}</div></div><div class="card-actions"><button class="edit-card-btn" data-id="${card.id}" data-question="${escapeHtml(card.question)}" data-answer="${escapeHtml(card.answer)}"><i class="fas fa-edit"></i> 编辑</button><button class="delete-card-btn" data-id="${card.id}"><i class="fas fa-trash"></i> 删除</button><button class="study-single-card" data-id="${card.id}"><i class="fas fa-play"></i> 学习</button></div></div>`;
+            html += `
+                <div class="card-item" data-card-id="${card.id}">
+                    <div class="card-preview">
+                        <div class="card-question">❓ ${escapeHtml(card.question)}</div>
+                        <div class="card-answer-preview">📖 ${escapeHtml(shortAns)}</div>
+                    </div>
+                    <div class="card-actions">
+                        <button class="edit-card-btn" data-id="${card.id}" data-question="${escapeHtml(card.question)}" data-answer="${escapeHtml(card.answer)}"><i class="fas fa-edit"></i> 编辑</button>
+                        <button class="delete-card-btn" data-id="${card.id}"><i class="fas fa-trash"></i> 删除</button>
+                        <button class="study-single-card" data-id="${card.id}"><i class="fas fa-play"></i> 学习</button>
+                    </div>
+                </div>
+            `;
         });
         container.innerHTML = html;
-        document.querySelectorAll('.card-item').forEach(cardEl => { const cardId = Number(cardEl.dataset.cardId); cardEl.addEventListener('click', (e) => { if (e.target.closest('.card-actions')) return; const targetCard = cards.find(c => Number(c.id) === Number(cardId)); if (targetCard) startStudyModeWithCard(targetCard); }); });
-        document.querySelectorAll('.edit-card-btn').forEach(btn => { btn.addEventListener('click', (e) => { e.stopPropagation(); const id = Number(btn.dataset.id); const q = btn.dataset.question; const a = btn.dataset.answer; openCardEditModal(id, q, a); }); });
-        document.querySelectorAll('.delete-card-btn').forEach(btn => { btn.addEventListener('click', (e) => { e.stopPropagation(); const id = Number(btn.dataset.id); deleteCardById(id); }); });
-        document.querySelectorAll('.study-single-card').forEach(btn => { btn.addEventListener('click', (e) => { e.stopPropagation(); const cardId = Number(btn.dataset.id); const targetCard = cards.find(c => Number(c.id) === Number(cardId)); if (targetCard) startStudyModeWithCard(targetCard); }); });
+        // 为每个卡片整体添加点击进入学习模式
+        document.querySelectorAll('.card-item').forEach(cardEl => {
+            const cardId = Number(cardEl.dataset.cardId);
+            cardEl.addEventListener('click', (e) => {
+                if (e.target.closest('.card-actions')) return;
+                const targetCard = cards.find(c => Number(c.id) === Number(cardId));
+                if (targetCard) startStudyModeWithCard(targetCard);
+            });
+        });
+        document.querySelectorAll('.edit-card-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const id = Number(btn.dataset.id);
+                const q = btn.dataset.question;
+                const a = btn.dataset.answer;
+                openCardEditModal(id, q, a);
+            });
+        });
+        document.querySelectorAll('.delete-card-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const id = Number(btn.dataset.id);
+                deleteCardById(id);
+            });
+        });
+        document.querySelectorAll('.study-single-card').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const cardId = Number(btn.dataset.id);
+                const targetCard = cards.find(c => Number(c.id) === Number(cardId));
+                if (targetCard) startStudyModeWithCard(targetCard);
+            });
+        });
     }
     
-    function addCard(question, answer, groupId = currentGroupId) {
-        if (!groupId) return showToast("请先选择卡组", true);
-        const newId = Date.now();
-        cards.push({ id: newId, groupId, question: question.trim(), answer: answer.trim() });
+function addCard(question, answer, groupId = currentGroupId) {
+    if (!groupId) return showToast("请先选择卡组", true);
+    const newId = Date.now();
+    cards.push({ id: newId, groupId, question: question.trim(), answer: answer.trim() });
+    saveData();
+    
+    // 只在非学习模式下刷新卡片列表
+    if (!studyModeActive && Number(groupId) === Number(currentGroupId)) {
+        renderCardsOfGroup();
+    }
+    renderGroupsSidebar();
+    showToast("卡片已添加");
+}
+    
+function updateCard(cardId, question, answer) {
+    const idx = cards.findIndex(c => Number(c.id) === Number(cardId));
+    if (idx !== -1) {
+        cards[idx].question = question.trim();
+        cards[idx].answer = answer.trim();
         saveData();
-        if (Number(groupId) === Number(currentGroupId)) renderCardsOfGroup();
+        
+        // 只在非学习模式下刷新卡片列表（避免操作不存在的 DOM）
+        if (!studyModeActive && Number(cards[idx].groupId) === Number(currentGroupId)) {
+            renderCardsOfGroup();
+        }
         renderGroupsSidebar();
-        showToast("卡片已添加");
-    }
-    
-    function updateCard(cardId, question, answer) {
-        const idx = cards.findIndex(c => Number(c.id) === Number(cardId));
-        if (idx !== -1) {
-            cards[idx].question = question.trim();
-            cards[idx].answer = answer.trim();
-            saveData();
-            if (Number(cards[idx].groupId) === Number(currentGroupId)) renderCardsOfGroup();
-            renderGroupsSidebar();
-            if (studyModeActive && currentStudyCard && Number(currentStudyCard.id) === Number(cardId)) {
-                currentStudyCard = cards[idx];
-                refreshStudyCardUI();
-            }
-            showToast("卡片已更新");
-        }
-    }
-    
-    function deleteCardById(cardId) {
-        if (!confirm("删除这张卡片？")) return;
-        const card = cards.find(c => Number(c.id) === Number(cardId));
-        const groupId = card?.groupId;
-        cards = cards.filter(c => Number(c.id) !== Number(cardId));
-        saveData();
+        
+        // 如果正在学习且当前卡片就是正在编辑的卡片，刷新学习界面
         if (studyModeActive && currentStudyCard && Number(currentStudyCard.id) === Number(cardId)) {
-            exitStudyMode();
-            showToast("当前学习的卡片已被删除，退出学习模式");
-        } else {
-            if (Number(groupId) === Number(currentGroupId)) renderCardsOfGroup();
-            renderGroupsSidebar();
+            currentStudyCard = cards[idx];
+            refreshStudyCardUI();
         }
+        showToast("卡片已更新");
     }
+}
+    
+function deleteCardById(cardId) {
+    if (!confirm("删除这张卡片？")) return;
+    const card = cards.find(c => Number(c.id) === Number(cardId));
+    const groupId = card?.groupId;
+    cards = cards.filter(c => Number(c.id) !== Number(cardId));
+    saveData();
+    
+    if (studyModeActive && currentStudyCard && Number(currentStudyCard.id) === Number(cardId)) {
+        exitStudyMode();
+        showToast("当前学习的卡片已被删除，退出学习模式");
+    } else {
+        // 只在非学习模式下刷新卡片列表
+        if (!studyModeActive && Number(groupId) === Number(currentGroupId)) {
+            renderCardsOfGroup();
+        }
+        renderGroupsSidebar();
+    }
+}
     
     function deleteGroupById(groupId) {
         if (!confirm("删除卡组将同时删除该组所有卡片，确定吗？")) return;
         const targetId = Number(groupId);
         groups = groups.filter(g => Number(g.id) !== targetId);
         cards = cards.filter(c => Number(c.groupId) !== targetId);
+        // 清除该卡组的记忆状态
         masteredCardsMap.delete(targetId);
         saveData();
         if (Number(currentGroupId) === targetId) {
@@ -344,9 +461,25 @@
         showToast("卡组已删除");
     }
     
-    function getMasteredSet(groupId) { const targetId = Number(groupId); if (!masteredCardsMap.has(targetId)) masteredCardsMap.set(targetId, new Set()); return masteredCardsMap.get(targetId); }
-    function getUnmasteredCards(groupId) { const allCards = getCardsByGroup(groupId); const mastered = getMasteredSet(groupId); return allCards.filter(c => !mastered.has(Number(c.id))); }
-    function getRandomUnmasteredCard(groupId) { const unmastered = getUnmasteredCards(groupId); if (unmastered.length === 0) return null; const randomIndex = Math.floor(Math.random() * unmastered.length); return unmastered[randomIndex]; }
+    // ---------- 学习模式 (记忆机制) ----------
+    function getMasteredSet(groupId) {
+        const targetId = Number(groupId);
+        if (!masteredCardsMap.has(targetId)) masteredCardsMap.set(targetId, new Set());
+        return masteredCardsMap.get(targetId);
+    }
+    
+    function getUnmasteredCards(groupId) {
+        const allCards = getCardsByGroup(groupId);
+        const mastered = getMasteredSet(groupId);
+        return allCards.filter(c => !mastered.has(Number(c.id)));
+    }
+    
+    function getRandomUnmasteredCard(groupId) {
+        const unmastered = getUnmasteredCards(groupId);
+        if (unmastered.length === 0) return null;
+        const randomIndex = Math.floor(Math.random() * unmastered.length);
+        return unmastered[randomIndex];
+    }
     
     function startStudyModeWithCard(initialCard) {
         if (!initialCard) return;
@@ -364,11 +497,15 @@
         if (!studyModeActive) return;
         const answerHtml = renderMarkdown(currentStudyCard.answer);
         const answerDiv = document.getElementById('studyAnswerArea');
-        if (answerDiv) { const markdownDiv = answerDiv.querySelector('.answer-markdown'); if (markdownDiv) markdownDiv.innerHTML = answerHtml; }
+        if (answerDiv) {
+            const markdownDiv = answerDiv.querySelector('.answer-markdown');
+            if (markdownDiv) markdownDiv.innerHTML = answerHtml;
+        }
         const questionDiv = document.querySelector('.study-question');
         if (questionDiv) questionDiv.innerHTML = escapeHtml(currentStudyCard.question);
     }
     
+    // 全局键盘事件处理函数
     let handleKeyDown = null;
     
     function renderStudyModeView() {
@@ -406,17 +543,37 @@
             </div>
         `;
         mainDiv.innerHTML = studyHtml;
-        if (handleKeyDown) document.removeEventListener('keydown', handleKeyDown);
+        
+        // 移除旧的事件监听器
+        if (handleKeyDown) {
+            document.removeEventListener('keydown', handleKeyDown);
+        }
+        
+        // 重新定义并添加键盘事件监听器
         handleKeyDown = (e) => {
             if (!studyModeActive) return;
+            
+            // 检查是否在输入框或文本区域中，避免影响编辑功能
             const target = e.target;
-            if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
+            if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+                return;
+            }
+            
+            // 按空格键显示/隐藏答案
             if (e.code === 'Space') {
                 e.preventDefault();
                 studyAnswerVisible = !studyAnswerVisible;
                 const ansDiv = document.getElementById('studyAnswerArea');
-                if (ansDiv) { if (studyAnswerVisible) ansDiv.classList.add('show'); else ansDiv.classList.remove('show'); }
+                if (ansDiv) {
+                    if (studyAnswerVisible) {
+                        ansDiv.classList.add('show');
+                    } else {
+                        ansDiv.classList.remove('show');
+                    }
+                }
             }
+            
+            // 按回车键切换到下一张卡片
             if (e.code === 'Enter') {
                 e.preventDefault();
                 const nextCard = getRandomUnmasteredCard(currentStudyGroupId);
@@ -426,10 +583,17 @@
                         if (confirm("所有卡片已掌握，是否重置本组记忆状态？")) {
                             masteredCardsMap.set(Number(currentStudyGroupId), new Set());
                             const newCard = getRandomUnmasteredCard(currentStudyGroupId);
-                            if (newCard) { currentStudyCard = newCard; studyAnswerVisible = false; renderStudyModeView(); }
-                            else exitStudyMode();
+                            if (newCard) { 
+                                currentStudyCard = newCard; 
+                                studyAnswerVisible = false; 
+                                renderStudyModeView(); 
+                            } else {
+                                exitStudyMode();
+                            }
                         }
-                    } else { showToast("暂无可抽卡片", true); }
+                    } else { 
+                        showToast("暂无可抽卡片", true); 
+                    }
                     return;
                 }
                 currentStudyCard = nextCard;
@@ -437,18 +601,30 @@
                 renderStudyModeView();
             }
         };
+        
+        // 添加事件监听器
         document.addEventListener('keydown', handleKeyDown);
+        
+        // 绑定事件
         document.getElementById('studyBodyClick')?.addEventListener('click', () => {
             studyAnswerVisible = !studyAnswerVisible;
             const ansDiv = document.getElementById('studyAnswerArea');
-            if (ansDiv) { if (studyAnswerVisible) ansDiv.classList.add('show'); else ansDiv.classList.remove('show'); }
+            if (ansDiv) {
+                if (studyAnswerVisible) {
+                    ansDiv.classList.add('show');
+                } else {
+                    ansDiv.classList.remove('show');
+                }
+            }
         });
         document.getElementById('exitStudyBtn')?.addEventListener('click', () => exitStudyMode());
         const editBtn = document.getElementById('editCurrentCardBtn');
         if (editBtn) {
             editBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                // 打开编辑模态框，传入当前卡片的 id、问题、答案
+                e.stopPropagation(); // 阻止事件冒泡
+                console.log('编辑按钮被点击');
+                console.log('当前卡片ID:', currentStudyCard.id);
+                console.log('当前卡片问题:', currentStudyCard.question);
                 openCardEditModal(currentStudyCard.id, currentStudyCard.question, currentStudyCard.answer);
             });
         }
@@ -504,9 +680,13 @@
         });
     }
     
+    // 重写exitStudyMode函数，确保移除键盘事件监听器
     const originalExitStudyMode = exitStudyMode;
     exitStudyMode = function() {
-        if (handleKeyDown) { document.removeEventListener('keydown', handleKeyDown); handleKeyDown = null; }
+        if (handleKeyDown) {
+            document.removeEventListener('keydown', handleKeyDown);
+            handleKeyDown = null;
+        }
         return originalExitStudyMode.apply(this, arguments);
     };
     
@@ -515,13 +695,32 @@
         currentStudyGroupId = null;
         currentStudyCard = null;
         studyAnswerVisible = false;
+        // 重建右侧内容：保留 header 和 cards 容器
         const mainDiv = document.getElementById('mainContent');
         const oldStudyView = document.getElementById('studyView');
         if (oldStudyView) oldStudyView.remove();
+        // 确保结构存在
         let header = document.getElementById('contentHeader');
         let cardsContainer = document.getElementById('cardsListContainer');
         if (!header || !cardsContainer) {
-            mainDiv.innerHTML = `<div class="content-header" id="contentHeader"><div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;"><h3 id="currentGroupTitle">选择一个卡组</h3><div style="position: relative; flex: 1; max-width: 300px;"><input type="text" id="cardSearchInput" placeholder="搜索卡片..." style="width: 100%; padding: 0.6rem 1rem; border-radius: 2rem; border: 1px solid #cde0ea; font-size: 0.9rem;" /></div></div><div class="toolbar-buttons" id="groupToolbar" style="display: none;"><button class="btn-icon" id="addCardBtn"><i class="fas fa-plus"></i> 新增卡片</button><button class="btn-icon" id="downloadTemplateBtn"><i class="fas fa-download"></i> 下载模版</button><button class="btn-icon" id="importExcelBtn"><i class="fas fa-upload"></i> 导入Excel</button><button class="btn-icon" id="exportExcelBtn"><i class="fas fa-file-excel"></i> 导出Excel</button><button class="btn-icon btn-primary" id="startStudyBtn"><i class="fas fa-graduation-cap"></i> 开始学习</button></div></div><div id="cardsListContainer" class="cards-grid"></div>`;
+            mainDiv.innerHTML = `
+                <div class="content-header" id="contentHeader">
+                    <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                        <h3 id="currentGroupTitle">选择一个卡组</h3>
+                        <div style="position: relative; flex: 1; max-width: 300px;">
+                            <input type="text" id="cardSearchInput" placeholder="搜索卡片..." style="width: 100%; padding: 0.6rem 1rem; border-radius: 2rem; border: 1px solid #cde0ea; font-size: 0.9rem;" />
+                        </div>
+                    </div>
+                    <div class="toolbar-buttons" id="groupToolbar" style="display: none;">
+                        <button class="btn-icon" id="addCardBtn"><i class="fas fa-plus"></i> 新增卡片</button>
+                        <button class="btn-icon" id="downloadTemplateBtn"><i class="fas fa-download"></i> 下载模版</button>
+                        <button class="btn-icon" id="importExcelBtn"><i class="fas fa-upload"></i> 导入Excel</button>
+                        <button class="btn-icon" id="exportExcelBtn"><i class="fas fa-file-excel"></i> 导出Excel</button>
+                        <button class="btn-icon btn-primary" id="startStudyBtn"><i class="fas fa-graduation-cap"></i> 开始学习</button>
+                    </div>
+                </div>
+                <div id="cardsListContainer" class="cards-grid"></div>
+            `;
         }
         if (currentGroupId) {
             document.getElementById('currentGroupTitle').innerHTML = `<i class="fas fa-folder-open"></i> ${escapeHtml(groups.find(g=>Number(g.id)===Number(currentGroupId))?.name || '卡组')}`;
@@ -536,6 +735,7 @@
         bindSearchEvents();
     }
     
+    // ---------- Excel 导入导出 (修复：正确解析列名，确保卡片添加) ----------
     function downloadTemplate() {
         const wsData = [["卡组", "题目", "答案"], ["示例卡组", "什么是递归？", "递归是函数调用自身的技术。\n**代码**```python\ndef fact(n): return 1 if n<=1 else n*fact(n-1)```"]];
         const ws = XLSX.utils.aoa_to_sheet(wsData);
@@ -549,7 +749,10 @@
         const input = document.createElement('input');
         input.type = 'file';
         input.accept = '.xlsx, .xls';
-        input.onchange = (e) => { const file = e.target.files[0]; if (file) importExcelWithGroups(file); };
+        input.onchange = (e) => {
+            const file = e.target.files[0];
+            if (file) importExcelWithGroups(file);
+        };
         input.click();
     }
     
@@ -561,39 +764,76 @@
             const sheet = workbook.Sheets[workbook.SheetNames[0]];
             const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
             if (!rows.length) { showToast("Excel 文件无数据", true); return; }
+            
             let addedCards = 0;
             const newCardsToAdd = [];
-            const newGroupsToAdd = [];
+            const newGroupsToAdd = []; // 暂存新卡组，避免重复创建
+            
             for (let row of rows) {
+                // 多列名兼容
                 let groupName = row["卡组"] || row["group"] || row["卡组名称"] || "";
                 let question = row["题目"] || row["question"] || "";
                 let answer = row["答案"] || row["answer"] || "";
-                if (!question && !answer) continue;
+                
+                if (!question && !answer) continue; // 空行跳过
                 if (!question) question = "无标题";
                 if (!answer) answer = "";
+                
                 let targetGroupId = null;
                 if (groupName) {
                     let existGroup = groups.find(g => g.name === groupName);
-                    if (existGroup) { targetGroupId = existGroup.id; }
-                    else {
+                    if (existGroup) {
+                        targetGroupId = existGroup.id;
+                    } else {
+                        // 检查是否已经在本次导入中创建过
                         let tempGroup = newGroupsToAdd.find(g => g.name === groupName);
-                        if (tempGroup) { targetGroupId = tempGroup.id; }
-                        else { const newGroupId = Date.now(); newGroupsToAdd.push({ id: newGroupId, name: groupName }); targetGroupId = newGroupId; }
+                        if (tempGroup) {
+                            targetGroupId = tempGroup.id;
+                        } else {
+                            const newGroupId = Date.now();
+                            newGroupsToAdd.push({ id: newGroupId, name: groupName });
+                            targetGroupId = newGroupId;
+                        }
                     }
                 } else {
-                    if (currentGroupId) { targetGroupId = currentGroupId; }
-                    else { showToast("未指定卡组且未选中任何卡组，部分卡片被跳过", true); continue; }
+                    // 未指定卡组，导入到当前选中的卡组；如果未选中，则跳过
+                    if (currentGroupId) {
+                        targetGroupId = currentGroupId;
+                    } else {
+                        showToast("未指定卡组且未选中任何卡组，部分卡片被跳过", true);
+                        continue;
+                    }
                 }
-                const newCardId = Date.now() + addedCards;
-                newCardsToAdd.push({ id: newCardId, groupId: targetGroupId, question: question.trim(), answer: answer.trim() });
+                
+                const newCardId = Date.now();
+                newCardsToAdd.push({
+                    id: newCardId,
+                    groupId: targetGroupId,
+                    question: question.trim(),
+                    answer: answer.trim()
+                });
                 addedCards++;
             }
-            if (newGroupsToAdd.length) groups.push(...newGroupsToAdd);
-            if (newCardsToAdd.length) cards.push(...newCardsToAdd);
-            if (addedCards === 0) { showToast("未发现有效的卡片数据", true); return; }
+            
+            if (newGroupsToAdd.length) {
+                groups.push(...newGroupsToAdd);
+            }
+            if (newCardsToAdd.length) {
+                cards.push(...newCardsToAdd);
+            }
+            
+            if (addedCards === 0) {
+                showToast("未发现有效的卡片数据", true);
+                return;
+            }
+            
             saveData();
             renderGroupsSidebar();
-            if (currentGroupId) { const hasRelated = newCardsToAdd.some(c => Number(c.groupId) === Number(currentGroupId)); if (hasRelated) renderCardsOfGroup(); }
+            // 如果当前选中的卡组是导入涉及到的，刷新卡片列表
+            if (currentGroupId) {
+                const hasRelated = newCardsToAdd.some(c => Number(c.groupId) === Number(currentGroupId));
+                if (hasRelated) renderCardsOfGroup();
+            }
             showToast(`成功导入 ${addedCards} 张卡片，${newGroupsToAdd.length} 个新卡组`);
         };
         reader.onerror = () => showToast("文件读取失败", true);
@@ -601,20 +841,56 @@
     }
     
     function exportGroupExcel() {
+        // 创建导出选项对话框
         const modalDiv = document.createElement('div');
         modalDiv.className = 'modal';
-        modalDiv.innerHTML = `<div class="modal-content" style="min-width: 300px;"><h3>选择导出范围</h3><div style="margin: 1.5rem 0;"><label style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.8rem; cursor: pointer; white-space: nowrap;"><span style="white-space: nowrap;">导出当前卡组 (${currentGroupId ? getCardsByGroup(currentGroupId).length : 0} 张卡片)</span><input type="radio" name="exportScope" value="current" ${currentGroupId ? 'checked' : 'disabled'} /></label><label style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.8rem; cursor: pointer; white-space: nowrap;"><span style="white-space: nowrap;">导出全部卡组 (${cards.length} 张卡片)</span><input type="radio" name="exportScope" value="all" checked /></label></div><div style="display:flex; gap:12px; justify-content:end;"><button id="exportCancel">取消</button><button id="exportConfirm" class="btn-primary">确定</button></div></div>`;
+        modalDiv.innerHTML = `
+            <div class="modal-content" style="min-width: 300px;">
+                <h3>选择导出范围</h3>
+                <div style="margin: 1.5rem 0;">
+                    <label style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.8rem; cursor: pointer; white-space: nowrap;">
+                        <span style="white-space: nowrap;">导出当前卡组 (${currentGroupId ? getCardsByGroup(currentGroupId).length : 0} 张卡片)</span>
+                        <input type="radio" name="exportScope" value="current" ${currentGroupId ? 'checked' : 'disabled'} />
+                    </label>
+                    <label style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.8rem; cursor: pointer; white-space: nowrap;">
+                        <span style="white-space: nowrap;">导出全部卡组 (${cards.length} 张卡片)</span>
+                        <input type="radio" name="exportScope" value="all" checked />
+                    </label>
+                </div>
+                <div style="display:flex; gap:12px; justify-content:end;">
+                    <button id="exportCancel">取消</button>
+                    <button id="exportConfirm" class="btn-primary">确定</button>
+                </div>
+            </div>
+        `;
         document.body.appendChild(modalDiv);
         modalDiv.style.display = 'flex';
+        
         const closeModal = () => modalDiv.remove();
         document.getElementById('exportCancel').onclick = closeModal;
+        
         document.getElementById('exportConfirm').onclick = () => {
             const selectedScope = document.querySelector('input[name="exportScope"]:checked')?.value;
             let exportCards = [];
-            if (selectedScope === 'current' && currentGroupId) exportCards = getCardsByGroup(currentGroupId);
-            else exportCards = cards;
-            if (!exportCards.length) { showToast("无卡片可导出", true); closeModal(); return; }
-            const exportData = exportCards.map(card => ({ "卡组": getGroupNameById(card.groupId), "题目": card.question, "答案": card.answer }));
+            
+            if (selectedScope === 'current' && currentGroupId) {
+                exportCards = getCardsByGroup(currentGroupId);
+            } else {
+                exportCards = cards;
+            }
+            
+            if (!exportCards.length) {
+                showToast("无卡片可导出", true);
+                closeModal();
+                return;
+            }
+            
+            const exportData = exportCards.map(card => ({
+                "卡组": getGroupNameById(card.groupId),
+                "题目": card.question,
+                "答案": card.answer
+            }));
+            
             const ws = XLSX.utils.json_to_sheet(exportData);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "卡片数据");
@@ -624,17 +900,24 @@
         };
     }
     
+    // 模态框及辅助
+    let currentEditCardId = null;
     function openCardAddModal() { currentEditCardId = null; showCardModal("新建卡片", "", ""); }
     function openCardEditModal(id, q, a) { currentEditCardId = id; showCardModal("编辑卡片", q, a); }
-    
     function showCardModal(title, qVal, aVal) {
         const modalDiv = document.createElement('div'); 
         modalDiv.className = 'modal';
         modalDiv.innerHTML = `
             <div class="modal-content">
                 <h3>${title}</h3>
-                <div class="form-group"><label>题目</label><input id="modalQuestion" value="${escapeHtml(qVal)}"></div>
-                <div class="form-group"><label>答案 (Markdown)</label><textarea id="modalAnswer" rows="6">${escapeHtml(aVal)}</textarea></div>
+                <div class="form-group">
+                    <label>题目</label>
+                    <input id="modalQuestion" value="${escapeHtml(qVal)}">
+                </div>
+                <div class="form-group">
+                    <label>答案 (Markdown)</label>
+                    <textarea id="modalAnswer" rows="6">${escapeHtml(aVal)}</textarea>
+                </div>
                 <div style="display:flex; gap:12px; justify-content:end;">
                     <button id="modalCancel">取消</button>
                     <button id="modalSave" class="btn-primary">保存</button>
@@ -644,25 +927,53 @@
         document.body.appendChild(modalDiv); 
         modalDiv.style.display = 'flex';
         
-        const close = () => { if (modalDiv && modalDiv.parentNode) modalDiv.parentNode.removeChild(modalDiv); };
+        const close = () => {
+            if (modalDiv && modalDiv.parentNode) {
+                modalDiv.parentNode.removeChild(modalDiv);
+            }
+        };
+        
         const cancelBtn = document.getElementById('modalCancel');
-        if (cancelBtn) cancelBtn.onclick = close;
+        if (cancelBtn) {
+            cancelBtn.onclick = close;
+        }
         
         const saveBtn = document.getElementById('modalSave');
         if (saveBtn) {
-            saveBtn.onclick = () => {
+            saveBtn.onclick = function(e) {
+                e.stopPropagation(); // 阻止事件冒泡
+                console.log('保存按钮被点击');
+                
                 const questionInput = document.getElementById('modalQuestion');
                 const answerInput = document.getElementById('modalAnswer');
+                
+                console.log('问题输入框:', questionInput);
+                console.log('答案输入框:', answerInput);
+                
                 if (questionInput && answerInput) {
                     const newQ = questionInput.value.trim();
                     const newA = answerInput.value;
-                    if (!newQ) { showToast("题目不能为空", true); return; }
+                    
+                    console.log('新题目:', newQ);
+                    console.log('新答案:', newA);
+                    
+                    if (!newQ) {
+                        showToast("题目不能为空", true);
+                        return;
+                    }
+                    
                     if (currentEditCardId === null) {
+                        console.log('添加新卡片');
                         addCard(newQ, newA);
                     } else {
+                        console.log('更新卡片，ID:', currentEditCardId);
                         updateCard(currentEditCardId, newQ, newA);
                     }
+                    
+                    console.log('关闭模态框');
                     close();
+                } else {
+                    console.log('输入框未找到');
                 }
             };
         }
@@ -708,10 +1019,23 @@
     }
     
     function bindSearchEvents() {
+        // 卡组搜索
         const groupSearchInput = document.getElementById('groupSearchInput');
-        if (groupSearchInput) groupSearchInput.addEventListener('input', (e) => { groupSearchKeyword = e.target.value; renderGroupsSidebar(); });
+        if (groupSearchInput) {
+            groupSearchInput.addEventListener('input', (e) => {
+                groupSearchKeyword = e.target.value;
+                renderGroupsSidebar();
+            });
+        }
+        
+        // 卡片搜索
         const cardSearchInput = document.getElementById('cardSearchInput');
-        if (cardSearchInput) cardSearchInput.addEventListener('input', (e) => { cardSearchKeyword = e.target.value; renderCardsOfGroup(); });
+        if (cardSearchInput) {
+            cardSearchInput.addEventListener('input', (e) => {
+                cardSearchKeyword = e.target.value;
+                renderCardsOfGroup();
+            });
+        }
     }
     
     function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, function(m){ if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
