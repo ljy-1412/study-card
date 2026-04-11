@@ -1,37 +1,135 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>智学卡组 | 记忆学习系统</title>
+    <title>智学卡组 | 科目·卡组记忆系统</title>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/2.1.0/showdown.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, 'Segoe UI', 'Roboto', sans-serif; }
-        body { background: #eef2f7; height: 100vh; overflow: hidden; }
-        .app-layout { display: flex; height: 100vh; width: 100%; }
-        /* 左侧卡组侧边栏 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: system-ui, 'Segoe UI', 'Roboto', sans-serif;
+        }
+        body {
+            background: #eef2f7;
+            height: 100vh;
+            overflow: hidden;
+        }
+        .app-layout {
+            display: flex;
+            height: 100vh;
+            width: 100%;
+        }
         .groups-sidebar {
-            width: 280px;
+            width: 300px;
             background: #ffffff;
             border-right: 1px solid #dce5ec;
             display: flex;
             flex-direction: column;
-            box-shadow: 2px 0 12px rgba(0,0,0,0.03);
+            box-shadow: 2px 0 12px rgba(0, 0, 0, 0.03);
             overflow-y: auto;
         }
-        .sidebar-header { padding: 1.5rem 1.2rem; border-bottom: 1px solid #eef2f8; }
-        .sidebar-header h2 { font-size: 1.4rem; background: linear-gradient(135deg, #1e4b6e, #2c7aa0); background-clip: text; -webkit-background-clip: text; color: transparent; }
-        .search-box { padding: 0 1.2rem 1rem; }
-        .search-box input { width: 100%; padding: 0.6rem; border-radius: 1rem; border: 1px solid #dce5ec; font-size: 0.9rem; }
-        .group-list { flex: 1; padding: 1rem 0.8rem; overflow-y: auto; }
-        .group-item {
-            background: #f8fafd;
+        .sidebar-header {
+            padding: 1rem 1.2rem 0.5rem 1.2rem;
+            border-bottom: 1px solid #eef2f8;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .sidebar-header h2 {
+            font-size: 1.3rem;
+            background: linear-gradient(135deg, #1e4b6e, #2c7aa0);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+        }
+        .new-subject-btn {
+            background: #2c7aa0;
+            color: white;
+            border: none;
+            border-radius: 2rem;
+            padding: 0.3rem 0.8rem;
+            font-size: 0.8rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .search-box {
+            padding: 0.8rem 1.2rem;
+        }
+        .search-box input {
+            width: 100%;
+            padding: 0.6rem;
             border-radius: 1rem;
-            padding: 0.8rem 1rem;
-            margin-bottom: 0.7rem;
+            border: 1px solid #dce5ec;
+            font-size: 0.9rem;
+        }
+        .subject-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0.5rem 0.8rem;
+        }
+        .subject-container {
+            margin-bottom: 1rem;
+            border-radius: 0.8rem;
+            background: #f8fafd;
+        }
+        .subject-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.7rem 1rem;
+            background: #eef3f8;
+            border-radius: 0.8rem;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .subject-header:hover {
+            background: #e2ecf3;
+        }
+        .subject-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            color: #1f4b64;
+        }
+        .subject-actions {
+            display: flex;
+            gap: 6px;
+        }
+        .subject-actions button {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            color: #7f9ab0;
+            font-size: 0.8rem;
+            padding: 4px;
+            border-radius: 30px;
+        }
+        .subject-actions button:hover {
+            background: #dce9f2;
+            color: #2c5a7a;
+        }
+        .group-list-under-subject {
+            padding: 0.5rem 0 0.5rem 1.5rem;
+            display: block;
+        }
+        .group-list-under-subject.collapsed {
+            display: none;
+        }
+        .group-item {
+            background: white;
+            border-radius: 0.8rem;
+            padding: 0.6rem 0.8rem;
+            margin-bottom: 0.5rem;
             cursor: pointer;
             transition: all 0.2s;
             display: flex;
@@ -39,21 +137,101 @@
             align-items: center;
             border: 1px solid #e9f0f5;
         }
-        .group-item.active { background: #e3f0f9; border-left: 4px solid #2c7aa0; }
-        .group-info { flex: 1; }
-        .group-name { font-weight: 600; color: #1f4b64; }
-        .group-count { font-size: 0.7rem; color: #6c8ea0; }
-        .group-actions { display: flex; gap: 6px; }
-        .group-actions button { background: transparent; border: none; cursor: pointer; color: #7f9ab0; font-size: 0.8rem; padding: 4px; border-radius: 30px; }
-        .group-actions button:hover { background: #dce9f2; color: #2c5a7a; }
-        .add-group-btn { margin: 1rem; background: #2c7aa0; color: white; border: none; border-radius: 2rem; padding: 0.6rem; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
-        /* 右侧主区域 */
-        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: #f5f9fe; position: relative; }
-        .content-header { background: white; padding: 0.8rem 2rem; border-bottom: 1px solid #e2ecf3; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
-        .toolbar-buttons { display: flex; gap: 10px; }
-        .btn-icon { background: white; border: 1px solid #cde0ea; padding: 0.4rem 1rem; border-radius: 2rem; font-size: 0.85rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: 0.2s; }
-        .btn-primary { background: #2c7aa0; border-color: #2c7aa0; color: white; }
-        .cards-grid { flex: 1; overflow-y: auto; padding: 1.5rem; display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 320px)); gap: 1.5rem; align-content: flex-start; }
+        .group-item.active {
+            background: #e3f0f9;
+            border-left: 4px solid #2c7aa0;
+        }
+        .group-info {
+            flex: 1;
+        }
+        .group-name {
+            font-weight: 600;
+            color: #1f4b64;
+            font-size: 0.9rem;
+        }
+        .group-count {
+            font-size: 0.7rem;
+            color: #6c8ea0;
+        }
+        .group-actions {
+            display: flex;
+            gap: 6px;
+        }
+        .group-actions button {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            color: #7f9ab0;
+            font-size: 0.7rem;
+            padding: 4px;
+            border-radius: 30px;
+        }
+        .group-actions button:hover {
+            background: #dce9f2;
+            color: #2c5a7a;
+        }
+        .add-group-btn {
+            margin: 0.5rem 1rem 1rem 1rem;
+            background: #2c7aa0;
+            color: white;
+            border: none;
+            border-radius: 2rem;
+            padding: 0.5rem;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 0.85rem;
+        }
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background: #f5f9fe;
+            position: relative;
+        }
+        .content-header {
+            background: white;
+            padding: 0.8rem 2rem;
+            border-bottom: 1px solid #e2ecf3;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .toolbar-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        .btn-icon {
+            background: white;
+            border: 1px solid #cde0ea;
+            padding: 0.4rem 1rem;
+            border-radius: 2rem;
+            font-size: 0.85rem;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: 0.2s;
+        }
+        .btn-primary {
+            background: #2c7aa0;
+            border-color: #2c7aa0;
+            color: white;
+        }
+        .cards-grid {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.5rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(290px, 320px));
+            gap: 1.5rem;
+            align-content: flex-start;
+        }
         .card-item {
             background: white;
             border-radius: 1.2rem;
@@ -61,48 +239,91 @@
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            box-shadow: 0 6px 12px rgba(0,0,0,0.05);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.05);
             transition: 0.2s;
             cursor: pointer;
         }
-        .card-item:hover { transform: translateY(-3px); box-shadow: 0 12px 20px rgba(0,0,0,0.1); }
-        .card-preview { flex: 1; padding: 1rem; overflow-y: auto; }
-        .card-question { font-weight: 700; color: #1f4b64; margin-bottom: 0.5rem; }
-        .card-answer-preview { font-size: 0.8rem; color: #4b6f88; }
-        .card-actions { display: flex; justify-content: flex-end; gap: 12px; padding: 0.5rem 1rem; border-top: 1px solid #ecf3f8; background: white; }
-        .card-actions button { background: transparent; border: none; cursor: pointer; font-size: 0.8rem; padding: 4px 8px; border-radius: 20px; transition: 0.1s; }
-        .card-actions button:hover { background: #eef2f8; }
-        /* 学习模式视图 - 固定尺寸，无抖动 */
-        .study-view { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: #f0f5fa; z-index: 20; display: flex; flex-direction: column; padding: 2rem; overflow-y: auto; pointer-events: auto; }
-        .study-card-container { 
-            max-width: 900px; 
+        .card-item:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 20px rgba(0, 0, 0, 0.1);
+        }
+        .card-preview {
+            flex: 1;
+            padding: 1rem;
+            overflow-y: auto;
+        }
+        .card-question {
+            font-weight: 700;
+            color: #1f4b64;
+            margin-bottom: 0.5rem;
+        }
+        .card-answer-preview {
+            font-size: 0.8rem;
+            color: #4b6f88;
+        }
+        .card-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            padding: 0.5rem 1rem;
+            border-top: 1px solid #ecf3f8;
+            background: white;
+        }
+        .card-actions button {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 0.8rem;
+            padding: 4px 8px;
+            border-radius: 20px;
+            transition: 0.1s;
+        }
+        .card-actions button:hover {
+            background: #eef2f8;
+        }
+        .study-view {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #f0f5fa;
+            z-index: 20;
+            display: flex;
+            flex-direction: column;
+            padding: 2rem;
+            overflow-y: auto;
+            pointer-events: auto;
+        }
+        .study-card-container {
+            max-width: 900px;
             width: 100%;
-            margin: 2rem auto; 
-            background: white; 
-            border-radius: 2rem; 
-            box-shadow: 0 25px 40px -12px rgba(0,0,0,0.2); 
-            overflow: hidden; 
-            height: 650px; /* 固定高度，防止抖动 */
+            margin: 2rem auto;
+            background: white;
+            border-radius: 2rem;
+            box-shadow: 0 25px 40px -12px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+            height: 650px;
             display: flex;
             flex-direction: column;
         }
-        .study-card-header { 
-            background: #f8fafd; 
-            padding: 1rem 1.8rem; 
-            border-bottom: 1px solid #e9f0f5; 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            flex-wrap: wrap; 
-            gap: 8px; 
+        .study-card-header {
+            background: #f8fafd;
+            padding: 1rem 1.8rem;
+            border-bottom: 1px solid #e9f0f5;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
             flex-shrink: 0;
         }
-        .study-body { 
-            padding: 2rem; 
-            cursor: pointer; 
-            transition: 0.1s; 
+        .study-body {
+            padding: 2rem;
+            cursor: pointer;
+            transition: 0.1s;
             flex: 1;
-            overflow-y: auto; 
+            overflow-y: auto;
             word-wrap: break-word;
         }
         .study-card-container .study-footer {
@@ -111,233 +332,593 @@
             background: #f8fafd;
             flex-shrink: 0;
         }
-        .study-question { font-size: 1.5rem; font-weight: 600; color: #1b2f3c; line-height: 1.4; margin-bottom: 1rem; }
-        .study-answer { margin-top: 1.5rem; padding-top: 1.2rem; border-top: 2px dashed #cde3ef; display: none; }
-        .study-answer.show { display: block; }
-        /* Markdown 样式 */
-        .answer-markdown { line-height: 1.6; }
-        .answer-markdown h1, .answer-markdown h2, .answer-markdown h3, .answer-markdown h4 { margin: 1rem 0 0.5rem; color: #1f4b64; }
-        .answer-markdown p { margin-bottom: 1rem; }
-        .answer-markdown ul, .answer-markdown ol { margin: 1rem 0; padding-left: 2rem; }
-        .answer-markdown li { margin-bottom: 0.5rem; }
-        .answer-markdown code { background: #f0f4f8; padding: 0.2rem 0.4rem; border-radius: 0.3rem; font-family: 'Courier New', monospace; }
-        .answer-markdown pre { background: #f0f4f8; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; margin: 1rem 0; }
-        .answer-markdown pre code { background: transparent; padding: 0; }
-        .answer-markdown blockquote { border-left: 4px solid #2c7aa0; padding-left: 1rem; margin: 1rem 0; color: #4b6f88; }
-        .answer-markdown a { color: #2c7aa0; text-decoration: none; }
-        .answer-markdown a:hover { text-decoration: underline; }
-        /* 表格样式 */
-        .answer-markdown table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
-        .answer-markdown th, .answer-markdown td { padding: 0.6rem; border: 1px solid #e9f0f5; text-align: left; }
-        .answer-markdown th { background: #f8fafd; font-weight: 600; color: #1f4b64; }
-        .answer-markdown tr:nth-child(even) { background: #f8fafd; }
-        .memory-buttons { display: flex; gap: 15px; margin-top: 1rem; justify-content: center; }
-        .btn-memory { padding: 0.6rem 1.2rem; border-radius: 3rem; border: none; font-weight: 500; cursor: pointer; }
-        .btn-remember { background: #2c7a4d; color: white; }
-        .btn-forget { background: #b85c3a; color: white; }
-        .empty-placeholder { text-align: center; padding: 3rem; color: #6c8ea0; }
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); justify-content: center; align-items: center; z-index: 1000; pointer-events: auto; }
-        .modal-content { background: white; width: 90%; max-width: 550px; border-radius: 1.5rem; padding: 1.8rem; }
-        .form-group { margin-bottom: 1rem; }
-        input, textarea { width: 100%; padding: 0.7rem; border-radius: 1rem; border: 1px solid #cbdde6; }
-        .toast { position: fixed; bottom: 25px; left: 50%; transform: translateX(-50%); background: #1e2f3c; color: white; padding: 0.6rem 1.5rem; border-radius: 40px; opacity: 0; transition: 0.2s; z-index: 2000; pointer-events: none; }
-        .back-link { margin-bottom: 1rem; display: inline-flex; align-items: center; gap: 6px; background: white; padding: 0.4rem 1rem; border-radius: 2rem; cursor: pointer; width: fit-content; }
+        .study-question {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #1b2f3c;
+            line-height: 1.4;
+            margin-bottom: 1rem;
+        }
+        .study-answer {
+            margin-top: 1.5rem;
+            padding-top: 1.2rem;
+            border-top: 2px dashed #cde3ef;
+            display: none;
+        }
+        .study-answer.show {
+            display: block;
+        }
+        .answer-markdown {
+            line-height: 1.6;
+        }
+        .answer-markdown h1,
+        .answer-markdown h2,
+        .answer-markdown h3,
+        .answer-markdown h4 {
+            margin: 1rem 0 0.5rem;
+            color: #1f4b64;
+        }
+        .answer-markdown p {
+            margin-bottom: 1rem;
+        }
+        .answer-markdown ul,
+        .answer-markdown ol {
+            margin: 1rem 0;
+            padding-left: 2rem;
+        }
+        .answer-markdown li {
+            margin-bottom: 0.5rem;
+        }
+        .answer-markdown code {
+            background: #f0f4f8;
+            padding: 0.2rem 0.4rem;
+            border-radius: 0.3rem;
+            font-family: 'Courier New', monospace;
+        }
+        .answer-markdown pre {
+            background: #f0f4f8;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+        .answer-markdown pre code {
+            background: transparent;
+            padding: 0;
+        }
+        .answer-markdown blockquote {
+            border-left: 4px solid #2c7aa0;
+            padding-left: 1rem;
+            margin: 1rem 0;
+            color: #4b6f88;
+        }
+        .answer-markdown a {
+            color: #2c7aa0;
+            text-decoration: none;
+        }
+        .answer-markdown a:hover {
+            text-decoration: underline;
+        }
+        .answer-markdown table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+        .answer-markdown th,
+        .answer-markdown td {
+            padding: 0.6rem;
+            border: 1px solid #e9f0f5;
+            text-align: left;
+        }
+        .answer-markdown th {
+            background: #f8fafd;
+            font-weight: 600;
+            color: #1f4b64;
+        }
+        .answer-markdown tr:nth-child(even) {
+            background: #f8fafd;
+        }
+        .memory-buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 1rem;
+            justify-content: center;
+        }
+        .btn-memory {
+            padding: 0.6rem 1.2rem;
+            border-radius: 3rem;
+            border: none;
+            font-weight: 500;
+            cursor: pointer;
+        }
+        .btn-remember {
+            background: #2c7a4d;
+            color: white;
+        }
+        .btn-forget {
+            background: #b85c3a;
+            color: white;
+        }
+        .empty-placeholder {
+            text-align: center;
+            padding: 3rem;
+            color: #6c8ea0;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            pointer-events: auto;
+        }
+        .modal-content {
+            background: white;
+            width: 90%;
+            max-width: 550px;
+            border-radius: 1.5rem;
+            padding: 1.8rem;
+        }
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        input,
+        textarea,
+        select {
+            width: 100%;
+            padding: 0.7rem;
+            border-radius: 1rem;
+            border: 1px solid #cbdde6;
+        }
+        .toast {
+            position: fixed;
+            bottom: 25px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1e2f3c;
+            color: white;
+            padding: 0.6rem 1.5rem;
+            border-radius: 40px;
+            opacity: 0;
+            transition: 0.2s;
+            z-index: 2000;
+            pointer-events: none;
+        }
+        .back-link {
+            margin-bottom: 1rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: white;
+            padding: 0.4rem 1rem;
+            border-radius: 2rem;
+            cursor: pointer;
+            width: fit-content;
+        }
+        .fa-chevron-right,
+        .fa-chevron-down {
+            font-size: 0.8rem;
+            transition: 0.1s;
+        }
     </style>
 </head>
+
 <body>
-<div class="app-layout">
-    <div class="groups-sidebar">
-        <div class="sidebar-header"><h2><i class="fas fa-layer-group"></i> 我的卡组</h2></div>
-        <div class="search-box">
-            <input type="text" id="groupSearchInput" placeholder="搜索卡组..." />
+    <div class="app-layout">
+        <div class="groups-sidebar">
+            <div class="sidebar-header">
+                <h2><i class="fas fa-layer-group"></i> 我的知识库</h2>
+                <button class="new-subject-btn" id="newSubjectBtn"><i class="fas fa-plus"></i> 科目</button>
+            </div>
+            <div class="search-box">
+                <input type="text" id="groupSearchInput" placeholder="搜索卡组..." />
+            </div>
+            <div class="subject-list" id="subjectListContainer"></div>
+            <button class="add-group-btn" id="sidebarAddGroupBtn" style="display: none;"><i class="fas fa-plus"></i> 新建卡组</button>
         </div>
-        <div class="group-list" id="groupListContainer"></div>
-        <button class="add-group-btn" id="sidebarAddGroupBtn"><i class="fas fa-plus"></i> 新建卡组</button>
-    </div>
-    <div class="main-content" id="mainContent">
-        <div class="content-header" id="contentHeader">
-            <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
-                <h3 id="currentGroupTitle">选择一个卡组</h3>
-                <div style="position: relative; flex: 1; max-width: 300px;">
-                    <input type="text" id="cardSearchInput" placeholder="搜索卡片..." style="width: 100%; padding: 0.6rem 1rem; border-radius: 2rem; border: 1px solid #cde0ea; font-size: 0.9rem;" />
+        <div class="main-content" id="mainContent">
+            <div class="content-header" id="contentHeader">
+                <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                    <h3 id="currentGroupTitle">选择一个卡组</h3>
+                    <div style="position: relative; flex: 1; max-width: 300px;">
+                        <input type="text" id="cardSearchInput" placeholder="搜索卡片..."
+                            style="width: 100%; padding: 0.6rem 1rem; border-radius: 2rem; border: 1px solid #cde0ea; font-size: 0.9rem;" />
+                    </div>
+                </div>
+                <div class="toolbar-buttons" id="groupToolbar" style="display: none;">
+                    <button class="btn-icon" id="addCardBtn"><i class="fas fa-plus"></i> 新增卡片</button>
+                    <button class="btn-icon" id="downloadTemplateBtn"><i class="fas fa-download"></i> 下载模版</button>
+                    <button class="btn-icon" id="importExcelBtn"><i class="fas fa-upload"></i> 导入Excel</button>
+                    <button class="btn-icon" id="exportExcelBtn"><i class="fas fa-file-excel"></i> 导出Excel</button>
+					<button class="btn-icon" id="exportJsonBtn"><i class="fas fa-file-code"></i> 导出JSON</button>
+                    <button class="btn-icon btn-primary" id="startStudyBtn"><i class="fas fa-graduation-cap"></i>
+                        开始学习</button>
                 </div>
             </div>
-            <div class="toolbar-buttons" id="groupToolbar" style="display: none;">
-                <button class="btn-icon" id="addCardBtn"><i class="fas fa-plus"></i> 新增卡片</button>
-                <button class="btn-icon" id="downloadTemplateBtn"><i class="fas fa-download"></i> 下载模版</button>
-                <button class="btn-icon" id="importExcelBtn"><i class="fas fa-upload"></i> 导入Excel</button>
-                <button class="btn-icon" id="exportExcelBtn"><i class="fas fa-file-excel"></i> 导出Excel</button>
-                <button class="btn-icon btn-primary" id="startStudyBtn"><i class="fas fa-graduation-cap"></i> 开始学习</button>
+            <div id="cardsListContainer" class="cards-grid">
+                <div class="empty-placeholder">👈 请从左侧选择一个卡组</div>
             </div>
         </div>
-        <div id="cardsListContainer" class="cards-grid"><div class="empty-placeholder">👈 请从左侧选择一个卡组</div></div>
     </div>
-</div>
-<div id="toastMsg" class="toast"></div>
-<script>
-    // ---------- 数据 ----------
-    let groups = [];
-    let cards = [];
-    let currentGroupId = null;
-    let masteredCardsMap = new Map(); // groupId -> Set(cardIds)
-    let studyModeActive = false;
-    let currentStudyGroupId = null;
-    let currentStudyCard = null;
-    let studyAnswerVisible = false;
-    let groupSearchKeyword = '';
-    let cardSearchKeyword = '';
-    
-    let showdownConverter = null;
-    
-    function showToast(msg, isErr = false) {
-        const toast = document.getElementById('toastMsg');
-        toast.textContent = msg;
-        toast.style.background = isErr ? '#b33a2c' : '#1e2f3c';
-        toast.style.opacity = '1';
-        setTimeout(() => toast.style.opacity = '0', 2500);
-    }
-    
-    function initMarkdown() {
-        showdownConverter = new showdown.Converter({ 
-            simplifiedAutoLink: true, 
-            tasklists: true, 
-            ghCodeBlocks: true,
-            tables: true,
-            strikethrough: true,
-            underline: true
-        });
-    }
-    
-    function renderMarkdown(md) {
-        if (!md) return '';
-        try {
-            let raw = showdownConverter.makeHtml(md);
-            return DOMPurify.sanitize(raw, {
-                ALLOWED_TAGS: ['p','br','strong','b','em','i','ul','ol','li','code','pre','h1','h2','h3','h4','blockquote','a','hr','div','span','table','thead','tbody','tr','th','td','img'],
-                ALLOWED_ATTR: ['href','target','src','alt']
+    <div id="toastMsg" class="toast"></div>
+    <script>
+        // ---------- 数据结构 ----------
+        let subjects = [];      // { id, name }
+        let groups = [];        // { id, name, subjectId }
+        let cards = [];
+        let currentGroupId = null;
+        let masteredCardsMap = new Map(); // groupId -> Set(cardIds)
+        let studyModeActive = false;
+        let currentStudyGroupId = null;
+        let currentStudyCard = null;
+        let studyAnswerVisible = false;
+        let groupSearchKeyword = '';
+        let cardSearchKeyword = '';
+        let collapsedSubjects = new Set();
+
+        let showdownConverter = null;
+
+        // ---------- 辅助函数 ----------
+        function showToast(msg, isErr = false) {
+            const toast = document.getElementById('toastMsg');
+            toast.textContent = msg;
+            toast.style.background = isErr ? '#b33a2c' : '#1e2f3c';
+            toast.style.opacity = '1';
+            setTimeout(() => toast.style.opacity = '0', 2500);
+        }
+		
+		function exportToJson() {
+    const exportData = {
+        subjects: subjects,
+        groups: groups.map(g => ({ id: g.id, name: g.name, subjectId: g.subjectId })),
+        cards: cards.map(c => ({ id: c.id, groupId: c.groupId, question: c.question, answer: c.answer }))
+    };
+    const dataStr = JSON.stringify(exportData, null, 2);
+    const blob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'data.json';
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('已导出 data.json 文件，请手动覆盖原文件');
+}
+
+        function initMarkdown() {
+            showdownConverter = new showdown.Converter({
+                simplifiedAutoLink: true,
+                tasklists: true,
+                ghCodeBlocks: true,
+                tables: true,
+                strikethrough: true,
+                underline: true
             });
-        } catch(e) { return md; }
-    }
-    
-    function saveData() {
-        localStorage.setItem('groups_data', JSON.stringify(groups));
-        localStorage.setItem('cards_data', JSON.stringify(cards));
-    }
-    
-    function loadData() {
-        const storedGroups = localStorage.getItem('groups_data');
-        const storedCards = localStorage.getItem('cards_data');
-        if (storedGroups) groups = JSON.parse(storedGroups);
-        if (storedCards) cards = JSON.parse(storedCards);
-        if (!groups.length) {
-            groups = [{ id: 1001, name: "前端技术" }, { id: 1002, name: "Python 基础" }];
-            cards = [
-                { id: 5001, groupId: 1001, question: "什么是闭包？", answer: "闭包是指函数能够记住并访问它的词法作用域。\n\n```js\nfunction outer() { let a=1; return function inner() { console.log(a); } }\n```" },
-                { id: 5002, groupId: 1001, question: "CSS 盒模型", answer: "由 content, padding, border, margin 组成。**标准盒模型** width 只包含 content。" },
-                { id: 5003, groupId: 1002, question: "装饰器是什么？", answer: "装饰器是一种修改函数行为的可调用对象，使用 `@decorator` 语法糖。" }
-            ];
+        }
+
+        function renderMarkdown(md) {
+            if (!md) return '';
+            try {
+                let raw = showdownConverter.makeHtml(md);
+                return DOMPurify.sanitize(raw, {
+                    ALLOWED_TAGS: ['p', 'br', 'strong', 'b', 'em', 'i', 'ul', 'ol', 'li', 'code', 'pre', 'h1', 'h2', 'h3', 'h4', 'blockquote', 'a', 'hr', 'div', 'span', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'img'],
+                    ALLOWED_ATTR: ['href', 'target', 'src', 'alt']
+                });
+            } catch (e) { return md; }
+        }
+
+        function saveData() {
+            localStorage.setItem('subjects_data', JSON.stringify(subjects));
+            localStorage.setItem('groups_data', JSON.stringify(groups));
+            localStorage.setItem('cards_data', JSON.stringify(cards));
+            localStorage.setItem('collapsedSubjects', JSON.stringify([...collapsedSubjects]));
+        }
+
+        // 从 JSON 文件加载初始数据（仅当 localStorage 为空时调用）
+        async function loadInitialDataFromJson() {
+            try {
+                const response = await fetch('data.json');
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+                const data = await response.json();
+                if (data.subjects && Array.isArray(data.subjects)) subjects = data.subjects;
+                if (data.groups && Array.isArray(data.groups)) groups = data.groups;
+                if (data.cards && Array.isArray(data.cards)) cards = data.cards;
+                // 确保每个 group 都有 subjectId（兼容旧格式）
+                groups.forEach(g => { if (g.subjectId === undefined && subjects.length) g.subjectId = subjects[0].id; });
+                saveData();
+                showToast('已从 data.json 加载初始知识库');
+            } catch (err) {
+                console.warn('无法加载 data.json，使用空知识库', err);
+                subjects = [];
+                groups = [];
+                cards = [];
+                // 创建默认示例数据
+                const defaultSubject = { id: Date.now(), name: "示例科目" };
+                subjects.push(defaultSubject);
+                const defaultGroup = { id: Date.now(), name: "示例卡组", subjectId: defaultSubject.id };
+                groups.push(defaultGroup);
+                cards.push({ id: Date.now(), groupId: defaultGroup.id, question: "欢迎使用", answer: "您可以导入 Excel 或手动添加卡片。" });
+                saveData();
+            }
+        }
+
+        async function loadData() {
+            const storedSubjects = localStorage.getItem('subjects_data');
+            const storedGroups = localStorage.getItem('groups_data');
+            const storedCards = localStorage.getItem('cards_data');
+            const storedCollapsed = localStorage.getItem('collapsedSubjects');
+            
+            if (storedSubjects && storedGroups && storedCards) {
+                // 已有本地数据，直接使用
+                subjects = JSON.parse(storedSubjects);
+                groups = JSON.parse(storedGroups);
+                cards = JSON.parse(storedCards);
+                if (storedCollapsed) collapsedSubjects = new Set(JSON.parse(storedCollapsed));
+                // 确保旧数据有 subjectId
+                let needSave = false;
+                groups.forEach(g => {
+                    if (g.subjectId === undefined) {
+                        if (subjects.length === 0) {
+                            const defaultSubject = { id: Date.now(), name: "默认科目" };
+                            subjects.push(defaultSubject);
+                        }
+                        g.subjectId = subjects[0].id;
+                        needSave = true;
+                    }
+                });
+                if (needSave) saveData();
+            } else {
+                // 无本地数据，从 JSON 加载
+                await loadInitialDataFromJson();
+                const storedCollapsedAfter = localStorage.getItem('collapsedSubjects');
+                if (storedCollapsedAfter) collapsedSubjects = new Set(JSON.parse(storedCollapsedAfter));
+            }
+        }
+
+        function getCardsByGroup(groupId) { return cards.filter(c => Number(c.groupId) === Number(groupId)); }
+        function getGroupNameById(id) { const g = groups.find(g => Number(g.id) === Number(id)); return g ? g.name : ''; }
+        function getSubjectNameById(id) { const s = subjects.find(s => Number(s.id) === Number(id)); return s ? s.name : ''; }
+
+        // 渲染左侧：科目+卡组
+        function renderGroupsSidebar() {
+            const container = document.getElementById('subjectListContainer');
+            if (!container) return;
+
+            const filteredGroups = groups.filter(group => {
+                if (!groupSearchKeyword) return true;
+                return group.name.toLowerCase().includes(groupSearchKeyword.toLowerCase());
+            });
+
+            const groupsBySubject = new Map();
+            subjects.forEach(subj => { groupsBySubject.set(subj.id, []); });
+            filteredGroups.forEach(group => {
+                const subjId = group.subjectId;
+                if (groupsBySubject.has(subjId)) {
+                    groupsBySubject.get(subjId).push(group);
+                } else {
+                    if (!groupsBySubject.has(subjId)) groupsBySubject.set(subjId, []);
+                    groupsBySubject.get(subjId).push(group);
+                }
+            });
+
+            if (subjects.length === 0 && filteredGroups.length === 0) {
+                container.innerHTML = '<div style="padding:1rem; text-align:center;">暂无科目，点击右上角「+ 科目」创建</div>';
+                document.getElementById('sidebarAddGroupBtn').style.display = 'none';
+                return;
+            }
+
+            let html = '';
+            for (let subj of subjects) {
+                const subjGroups = groupsBySubject.get(subj.id) || [];
+                const isCollapsed = collapsedSubjects.has(subj.id);
+                const chevronClass = isCollapsed ? 'fa-chevron-right' : 'fa-chevron-down';
+                html += `
+                    <div class="subject-container" data-subject-id="${subj.id}">
+                        <div class="subject-header" data-subject-id="${subj.id}">
+                            <div class="subject-title">
+                                <i class="fas ${chevronClass} subject-toggle-icon"></i>
+                                <span>📚 ${escapeHtml(subj.name)}</span>
+                                <span style="font-size:0.7rem; color:#6c8ea0;">(${subjGroups.length}卡组)</span>
+                            </div>
+                            <div class="subject-actions">
+                                <button class="add-group-to-subject" data-subject-id="${subj.id}" title="在此科目下新建卡组"><i class="fas fa-plus"></i></button>
+                                <button class="edit-subject" data-subject-id="${subj.id}" data-name="${escapeHtml(subj.name)}"><i class="fas fa-edit"></i></button>
+                                <button class="delete-subject" data-subject-id="${subj.id}"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </div>
+                        <div class="group-list-under-subject ${isCollapsed ? 'collapsed' : ''}" data-subject-id="${subj.id}">
+                `;
+                if (subjGroups.length === 0) {
+                    html += `<div style="padding:0.5rem; color:#aaa; font-size:0.8rem; text-align:center;">暂无卡组</div>`;
+                } else {
+                    subjGroups.forEach(group => {
+                        const count = getCardsByGroup(group.id).length;
+                        const activeClass = (Number(currentGroupId) === Number(group.id)) ? 'active' : '';
+                        html += `
+                            <div class="group-item ${activeClass}" data-id="${group.id}">
+                                <div class="group-info">
+                                    <div class="group-name">📁 ${escapeHtml(group.name)}</div>
+                                    <div class="group-count">${count} 张卡片</div>
+                                </div>
+                                <div class="group-actions">
+                                    <button class="edit-group" data-id="${group.id}" data-name="${escapeHtml(group.name)}" data-subject-id="${group.subjectId}"><i class="fas fa-edit"></i></button>
+                                    <button class="delete-group" data-id="${group.id}"><i class="fas fa-trash"></i></button>
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+                html += `</div></div>`;
+            }
+            container.innerHTML = html;
+
+            // 折叠/展开
+            document.querySelectorAll('.subject-header').forEach(header => {
+                header.addEventListener('click', (e) => {
+                    if (e.target.closest('.subject-actions')) return;
+                    const subjId = Number(header.dataset.subjectId);
+                    const groupListDiv = header.parentElement.querySelector('.group-list-under-subject');
+                    if (groupListDiv) {
+                        if (collapsedSubjects.has(subjId)) {
+                            collapsedSubjects.delete(subjId);
+                            groupListDiv.classList.remove('collapsed');
+                            header.querySelector('.subject-toggle-icon').classList.replace('fa-chevron-right', 'fa-chevron-down');
+                        } else {
+                            collapsedSubjects.add(subjId);
+                            groupListDiv.classList.add('collapsed');
+                            header.querySelector('.subject-toggle-icon').classList.replace('fa-chevron-down', 'fa-chevron-right');
+                        }
+                        saveData();
+                    }
+                });
+            });
+
+            // 科目内新建卡组
+            document.querySelectorAll('.add-group-to-subject').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const subjectId = Number(btn.dataset.subjectId);
+                    openEditGroupModal(null, '', subjectId);
+                });
+            });
+
+            // 编辑科目
+            document.querySelectorAll('.edit-subject').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const id = Number(btn.dataset.subjectId);
+                    const name = btn.dataset.name;
+                    openEditSubjectModal(id, name);
+                });
+            });
+
+            // 删除科目
+            document.querySelectorAll('.delete-subject').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const id = Number(btn.dataset.subjectId);
+                    deleteSubjectById(id);
+                });
+            });
+
+            // 卡组点击
+            document.querySelectorAll('.group-item').forEach(el => {
+                const id = Number(el.dataset.id);
+                el.addEventListener('click', (e) => {
+                    if (e.target.closest('.group-actions')) return;
+                    selectGroup(id);
+                });
+            });
+            document.querySelectorAll('.edit-group').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const id = Number(btn.dataset.id);
+                    const name = btn.dataset.name;
+                    const subjectId = Number(btn.dataset.subjectId);
+                    openEditGroupModal(id, name, subjectId);
+                });
+            });
+            document.querySelectorAll('.delete-group').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const id = Number(btn.dataset.id);
+                    deleteGroupById(id);
+                });
+            });
+
+            document.getElementById('sidebarAddGroupBtn').style.display = 'none';
+        }
+
+        // 科目操作
+        function openEditSubjectModal(id, oldName) {
+            const modalDiv = document.createElement('div'); modalDiv.className = 'modal';
+            modalDiv.innerHTML = `<div class="modal-content"><h3>${id ? "编辑科目" : "新建科目"}</h3><div class="form-group"><label>科目名称</label><input id="subjectName" value="${escapeHtml(oldName)}"></div><div style="display:flex; gap:12px; justify-content:end;"><button id="cancelSubject">取消</button><button id="saveSubject" class="btn-primary">确定</button></div></div>`;
+            document.body.appendChild(modalDiv); modalDiv.style.display = 'flex';
+            const close = () => modalDiv.remove();
+            document.getElementById('cancelSubject').onclick = close;
+            document.getElementById('saveSubject').onclick = () => {
+                const newName = document.getElementById('subjectName').value.trim();
+                if (!newName) { showToast("名称不能为空", true); return; }
+                if (id) {
+                    const s = subjects.find(s => Number(s.id) === Number(id));
+                    if (s) { s.name = newName; saveData(); renderGroupsSidebar(); showToast("科目已更新"); }
+                } else {
+                    const newId = Date.now();
+                    subjects.push({ id: newId, name: newName });
+                    saveData();
+                    renderGroupsSidebar();
+                    showToast("科目已创建");
+                }
+                close();
+            };
+        }
+
+        function deleteSubjectById(subjectId) {
+            const targetId = Number(subjectId);
+            const groupsInSubject = groups.filter(g => Number(g.subjectId) === targetId);
+            if (groupsInSubject.length > 0 && !confirm(`科目下还有 ${groupsInSubject.length} 个卡组，删除科目会同时删除这些卡组及其所有卡片，确定吗？`)) {
+                return;
+            }
+            groupsInSubject.forEach(group => {
+                cards = cards.filter(c => Number(c.groupId) !== Number(group.id));
+                masteredCardsMap.delete(Number(group.id));
+            });
+            groups = groups.filter(g => Number(g.subjectId) !== targetId);
+            subjects = subjects.filter(s => Number(s.id) !== targetId);
+            if (currentGroupId && groupsInSubject.some(g => Number(g.id) === Number(currentGroupId))) {
+                currentGroupId = null;
+                document.getElementById('cardsListContainer').innerHTML = '<div class="empty-placeholder">请选择卡组</div>';
+                document.getElementById('groupToolbar').style.display = 'none';
+                document.getElementById('currentGroupTitle').innerHTML = '选择一个卡组';
+            }
+            if (studyModeActive && groupsInSubject.some(g => Number(g.id) === Number(currentStudyGroupId))) exitStudyMode();
             saveData();
+            renderGroupsSidebar();
+            showToast("科目已删除");
         }
-    }
-    
-    function getCardsByGroup(groupId) { return cards.filter(c => Number(c.groupId) === Number(groupId)); }
-    function getGroupNameById(id) { const g = groups.find(g => Number(g.id) === Number(id)); return g ? g.name : ''; }
-    
-    // 渲染左侧卡组列表
-    function renderGroupsSidebar() {
-        const container = document.getElementById('groupListContainer');
-        if (!container) return;
-        
-        // 过滤卡组
-        const filteredGroups = groups.filter(group => {
-            if (!groupSearchKeyword) return true;
-            return group.name.toLowerCase().includes(groupSearchKeyword.toLowerCase());
-        });
-        
-        if (!filteredGroups.length) {
-            container.innerHTML = '<div style="padding:1rem; text-align:center;">' + 
-                (groupSearchKeyword ? '未找到匹配的卡组' : '暂无卡组，点击下方新建') + '</div>';
-            return;
+
+        function selectGroup(groupId) {
+            if (studyModeActive) exitStudyMode();
+            currentGroupId = groupId;
+            renderGroupsSidebar();
+            renderCardsOfGroup();
+            const group = groups.find(g => Number(g.id) === Number(groupId));
+            if (group) {
+                const subject = subjects.find(s => Number(s.id) === Number(group.subjectId));
+                document.getElementById('currentGroupTitle').innerHTML = `<i class="fas fa-folder-open"></i> ${escapeHtml(subject ? subject.name + ' / ' : '')}${escapeHtml(group.name)}`;
+            } else {
+                document.getElementById('currentGroupTitle').innerHTML = '卡组';
+            }
+            document.getElementById('groupToolbar').style.display = 'flex';
         }
-        
-        let html = '';
-        filteredGroups.forEach(group => {
-            const count = getCardsByGroup(group.id).length;
-            const activeClass = (Number(currentGroupId) === Number(group.id)) ? 'active' : '';
-            html += `
-                <div class="group-item ${activeClass}" data-id="${group.id}">
-                    <div class="group-info">
-                        <div class="group-name">📁 ${escapeHtml(group.name)}</div>
-                        <div class="group-count">${count} 张卡片</div>
-                    </div>
-                    <div class="group-actions">
-                        <button class="edit-group" data-id="${group.id}" data-name="${escapeHtml(group.name)}"><i class="fas fa-edit"></i></button>
-                        <button class="delete-group" data-id="${group.id}"><i class="fas fa-trash"></i></button>
-                    </div>
-                </div>
-            `;
-        });
-        container.innerHTML = html;
-        // 绑定点击选中卡组
-        document.querySelectorAll('.group-item').forEach(el => {
-            const id = Number(el.dataset.id);
-            el.addEventListener('click', (e) => {
-                if (e.target.closest('.edit-group') || e.target.closest('.delete-group')) return;
-                selectGroup(id);
-            });
-        });
-        document.querySelectorAll('.edit-group').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const id = Number(btn.dataset.id);
-                const oldName = btn.dataset.name;
-                openEditGroupModal(id, oldName);
-            });
-        });
-        document.querySelectorAll('.delete-group').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const id = Number(btn.dataset.id);
-                deleteGroupById(id);
-            });
-        });
-    }
-    
-    function selectGroup(groupId) {
-        if (studyModeActive) exitStudyMode();
-        currentGroupId = groupId;
-        renderGroupsSidebar();
-        renderCardsOfGroup();
-        document.getElementById('currentGroupTitle').innerHTML = `<i class="fas fa-folder-open"></i> ${escapeHtml(groups.find(g=>Number(g.id)===Number(groupId))?.name || '卡组')}`;
-        document.getElementById('groupToolbar').style.display = 'flex';
-    }
-    
-    function renderCardsOfGroup() {
-        const container = document.getElementById('cardsListContainer');
-        if (!currentGroupId) {
-            container.innerHTML = '<div class="empty-placeholder">👈 请从左侧选择一个卡组</div>';
-            return;
-        }
-        let groupCards = getCardsByGroup(currentGroupId);
-        
-        // 过滤卡片
-        if (cardSearchKeyword) {
-            groupCards = groupCards.filter(card => {
-                const keyword = cardSearchKeyword.toLowerCase();
-                return card.question.toLowerCase().includes(keyword) || 
-                       card.answer.toLowerCase().includes(keyword);
-            });
-        }
-        
-        if (!groupCards.length) {
-            container.innerHTML = '<div class="empty-placeholder">' + 
-                (cardSearchKeyword ? '未找到匹配的卡片' : '📭 该卡组暂无卡片，点击「新增卡片」添加') + '</div>';
-            return;
-        }
-        let html = '';
-        groupCards.forEach(card => {
-            const shortAns = card.answer.length > 70 ? card.answer.substring(0,70)+'…' : card.answer;
-            html += `
+
+        // 渲染卡片列表
+        function renderCardsOfGroup() {
+            const container = document.getElementById('cardsListContainer');
+            if (!currentGroupId) {
+                container.innerHTML = '<div class="empty-placeholder">👈 请从左侧选择一个卡组</div>';
+                return;
+            }
+            let groupCards = getCardsByGroup(currentGroupId);
+            if (cardSearchKeyword) {
+                groupCards = groupCards.filter(card => {
+                    const keyword = cardSearchKeyword.toLowerCase();
+                    return card.question.toLowerCase().includes(keyword) || card.answer.toLowerCase().includes(keyword);
+                });
+            }
+            if (!groupCards.length) {
+                container.innerHTML = '<div class="empty-placeholder">' + (cardSearchKeyword ? '未找到匹配的卡片' : '📭 该卡组暂无卡片，点击「新增卡片」添加') + '</div>';
+                return;
+            }
+            let html = '';
+            groupCards.forEach(card => {
+                const shortAns = card.answer.length > 70 ? card.answer.substring(0, 70) + '…' : card.answer;
+                html += `
                 <div class="card-item" data-card-id="${card.id}">
                     <div class="card-preview">
                         <div class="card-question">❓ ${escapeHtml(card.question)}</div>
@@ -350,232 +931,211 @@
                     </div>
                 </div>
             `;
-        });
-        container.innerHTML = html;
-        // 为每个卡片整体添加点击进入学习模式
-        document.querySelectorAll('.card-item').forEach(cardEl => {
-            const cardId = Number(cardEl.dataset.cardId);
-            cardEl.addEventListener('click', (e) => {
-                if (e.target.closest('.card-actions')) return;
-                const targetCard = cards.find(c => Number(c.id) === Number(cardId));
-                if (targetCard) startStudyModeWithCard(targetCard);
             });
-        });
-        document.querySelectorAll('.edit-card-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const id = Number(btn.dataset.id);
-                const q = btn.dataset.question;
-                const a = btn.dataset.answer;
-                openCardEditModal(id, q, a);
+            container.innerHTML = html;
+            document.querySelectorAll('.card-item').forEach(cardEl => {
+                const cardId = Number(cardEl.dataset.cardId);
+                cardEl.addEventListener('click', (e) => { if (!e.target.closest('.card-actions')) { const targetCard = cards.find(c => Number(c.id) === cardId); if (targetCard) startStudyModeWithCard(targetCard); } });
             });
-        });
-        document.querySelectorAll('.delete-card-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const id = Number(btn.dataset.id);
-                deleteCardById(id);
+            document.querySelectorAll('.edit-card-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => { e.stopPropagation(); openCardEditModal(Number(btn.dataset.id), btn.dataset.question, btn.dataset.answer); });
             });
-        });
-        document.querySelectorAll('.study-single-card').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const cardId = Number(btn.dataset.id);
-                const targetCard = cards.find(c => Number(c.id) === Number(cardId));
-                if (targetCard) startStudyModeWithCard(targetCard);
+            document.querySelectorAll('.delete-card-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => { e.stopPropagation(); deleteCardById(Number(btn.dataset.id)); });
             });
-        });
-    }
-    
-function addCard(question, answer, groupId = currentGroupId) {
-    if (!groupId) return showToast("请先选择卡组", true);
-    const newId = Date.now();
-    cards.push({ id: newId, groupId, question: question.trim(), answer: answer.trim() });
-    saveData();
-    
-    // 只在非学习模式下刷新卡片列表
-    if (!studyModeActive && Number(groupId) === Number(currentGroupId)) {
-        renderCardsOfGroup();
-    }
-    renderGroupsSidebar();
-    showToast("卡片已添加");
-}
-    
-function updateCard(cardId, question, answer) {
-    const idx = cards.findIndex(c => Number(c.id) === Number(cardId));
-    if (idx !== -1) {
-        cards[idx].question = question.trim();
-        cards[idx].answer = answer.trim();
-        saveData();
-        
-        // 只在非学习模式下刷新卡片列表（避免操作不存在的 DOM）
-        if (!studyModeActive && Number(cards[idx].groupId) === Number(currentGroupId)) {
-            renderCardsOfGroup();
+            document.querySelectorAll('.study-single-card').forEach(btn => {
+                btn.addEventListener('click', (e) => { e.stopPropagation(); const targetCard = cards.find(c => Number(c.id) === Number(btn.dataset.id)); if (targetCard) startStudyModeWithCard(targetCard); });
+            });
         }
-        renderGroupsSidebar();
-        
-        // 如果正在学习且当前卡片就是正在编辑的卡片，刷新学习界面
-        if (studyModeActive && currentStudyCard && Number(currentStudyCard.id) === Number(cardId)) {
-            currentStudyCard = cards[idx];
-            refreshStudyCardUI();
+
+        // 卡组操作
+        function addGroup(name, subjectId) {
+            if (!subjectId) { showToast("请选择科目", true); return; }
+            const newId = Date.now();
+            groups.push({ id: newId, name: name.trim(), subjectId: Number(subjectId) });
+            saveData();
+            renderGroupsSidebar();
+            showToast("卡组已创建");
         }
-        showToast("卡片已更新");
-    }
-}
-    
-function deleteCardById(cardId) {
-    if (!confirm("删除这张卡片？")) return;
-    const card = cards.find(c => Number(c.id) === Number(cardId));
-    const groupId = card?.groupId;
-    cards = cards.filter(c => Number(c.id) !== Number(cardId));
-    saveData();
-    
-    if (studyModeActive && currentStudyCard && Number(currentStudyCard.id) === Number(cardId)) {
-        exitStudyMode();
-        showToast("当前学习的卡片已被删除，退出学习模式");
-    } else {
-        // 只在非学习模式下刷新卡片列表
-        if (!studyModeActive && Number(groupId) === Number(currentGroupId)) {
-            renderCardsOfGroup();
-        }
-        renderGroupsSidebar();
-    }
-}
-    
-    function deleteGroupById(groupId) {
-        if (!confirm("删除卡组将同时删除该组所有卡片，确定吗？")) return;
-        const targetId = Number(groupId);
-        groups = groups.filter(g => Number(g.id) !== targetId);
-        cards = cards.filter(c => Number(c.groupId) !== targetId);
-        // 清除该卡组的记忆状态
-        masteredCardsMap.delete(targetId);
-        saveData();
-        if (Number(currentGroupId) === targetId) {
-            currentGroupId = null;
-            document.getElementById('cardsListContainer').innerHTML = '<div class="empty-placeholder">请选择卡组</div>';
-            document.getElementById('groupToolbar').style.display = 'none';
-            document.getElementById('currentGroupTitle').innerHTML = '选择一个卡组';
-        }
-        if (studyModeActive && Number(currentStudyGroupId) === targetId) exitStudyMode();
-        renderGroupsSidebar();
-        showToast("卡组已删除");
-    }
-    
-    // ---------- 学习模式 (记忆机制) ----------
-    function getMasteredSet(groupId) {
-        const targetId = Number(groupId);
-        if (!masteredCardsMap.has(targetId)) masteredCardsMap.set(targetId, new Set());
-        return masteredCardsMap.get(targetId);
-    }
-    
-    function getUnmasteredCards(groupId) {
-        const allCards = getCardsByGroup(groupId);
-        const mastered = getMasteredSet(groupId);
-        return allCards.filter(c => !mastered.has(Number(c.id)));
-    }
-    
-    function getRandomUnmasteredCard(groupId) {
-        const unmastered = getUnmasteredCards(groupId);
-        if (unmastered.length === 0) return null;
-        const randomIndex = Math.floor(Math.random() * unmastered.length);
-        return unmastered[randomIndex];
-    }
-    
-    function startStudyModeWithCard(initialCard) {
-        if (!initialCard) return;
-        const group = groups.find(g => Number(g.id) === Number(initialCard.groupId));
-        if (!group) return;
-        currentStudyGroupId = group.id;
-        currentStudyCard = { ...initialCard };
-        studyAnswerVisible = false;
-        studyModeActive = true;
-        if (!masteredCardsMap.has(Number(currentStudyGroupId))) masteredCardsMap.set(Number(currentStudyGroupId), new Set());
-        renderStudyModeView();
-    }
-    
-    function refreshStudyCardUI() {
-        if (!studyModeActive) return;
-        const answerHtml = renderMarkdown(currentStudyCard.answer);
-        const answerDiv = document.getElementById('studyAnswerArea');
-        if (answerDiv) {
-            const markdownDiv = answerDiv.querySelector('.answer-markdown');
-            if (markdownDiv) markdownDiv.innerHTML = answerHtml;
-        }
-        const questionDiv = document.querySelector('.study-question');
-        if (questionDiv) questionDiv.innerHTML = escapeHtml(currentStudyCard.question);
-    }
-    
-    // 全局键盘事件处理函数
-    let handleKeyDown = null;
-    
-    function renderStudyModeView() {
-        const mainDiv = document.getElementById('mainContent');
-        const group = groups.find(g => Number(g.id) === Number(currentStudyGroupId));
-        const unmasteredCount = getUnmasteredCards(currentStudyGroupId).length;
-        const totalCount = getCardsByGroup(currentStudyGroupId).length;
-        const masteredCount = totalCount - unmasteredCount;
-        const answerHtml = renderMarkdown(currentStudyCard.answer);
-        const answerClass = studyAnswerVisible ? 'show' : '';
-        const studyHtml = `
-            <div class="study-view" id="studyView">
-                <div class="back-link" id="exitStudyBtn"><i class="fas fa-arrow-left"></i> 返回卡组列表</div>
-                <div class="study-card-container">
-                    <div class="study-card-header">
-                        <span><i class="fas fa-layer-group"></i> ${escapeHtml(group.name)}</span>
-                        <span>📊 已掌握 ${masteredCount} / ${totalCount}</span>
-                        <button id="editCurrentCardBtn" class="btn-icon"><i class="fas fa-pen"></i> 编辑卡片</button>
-                    </div>
-                    <div class="study-body" id="studyBodyClick">
-                        <div class="study-question">${escapeHtml(currentStudyCard.question)}</div>
-                        <div class="study-answer ${answerClass}" id="studyAnswerArea">
-                            <div class="answer-markdown">${answerHtml}</div>
-                        </div>
-                        <div style="text-align:center; margin-top:1rem; font-size:0.8rem; color:#7f9eb5;">👇 点击卡片任意位置显示答案 | ⌨️ 空格键显示/隐藏答案 | 回车键切换卡片</div>
-                    </div>
-                    <div class="study-footer">
-                        <button id="randomCardBtn" class="btn-icon"><i class="fas fa-random"></i> 随机抽卡</button>
-                        <div class="memory-buttons">
-                            <button id="rememberBtn" class="btn-memory btn-remember"><i class="fas fa-check-circle"></i> 记住了 (不再出现)</button>
-                            <button id="forgetBtn" class="btn-memory btn-forget"><i class="fas fa-redo-alt"></i> 没记住 (继续出现)</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-        mainDiv.innerHTML = studyHtml;
-        
-        // 移除旧的事件监听器
-        if (handleKeyDown) {
-            document.removeEventListener('keydown', handleKeyDown);
-        }
-        
-        // 重新定义并添加键盘事件监听器
-        handleKeyDown = (e) => {
-            if (!studyModeActive) return;
-            
-            // 检查是否在输入框或文本区域中，避免影响编辑功能
-            const target = e.target;
-            if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
-                return;
+
+        function updateGroup(groupId, newName, newSubjectId) {
+            const idx = groups.findIndex(g => Number(g.id) === Number(groupId));
+            if (idx !== -1) {
+                groups[idx].name = newName.trim();
+                groups[idx].subjectId = Number(newSubjectId);
+                saveData();
+                renderGroupsSidebar();
+                if (Number(currentGroupId) === Number(groupId)) {
+                    const subject = subjects.find(s => Number(s.id) === Number(newSubjectId));
+                    document.getElementById('currentGroupTitle').innerHTML = `<i class="fas fa-folder-open"></i> ${escapeHtml(subject ? subject.name + ' / ' : '')}${escapeHtml(newName)}`;
+                }
+                showToast("卡组已更新");
             }
-            
-            // 按空格键显示/隐藏答案
-            if (e.code === 'Space') {
-                e.preventDefault();
+        }
+
+        function deleteGroupById(groupId) {
+            if (!confirm("删除卡组将同时删除该组所有卡片，确定吗？")) return;
+            const targetId = Number(groupId);
+            groups = groups.filter(g => Number(g.id) !== targetId);
+            cards = cards.filter(c => Number(c.groupId) !== targetId);
+            masteredCardsMap.delete(targetId);
+            saveData();
+            if (Number(currentGroupId) === targetId) {
+                currentGroupId = null;
+                document.getElementById('cardsListContainer').innerHTML = '<div class="empty-placeholder">请选择卡组</div>';
+                document.getElementById('groupToolbar').style.display = 'none';
+                document.getElementById('currentGroupTitle').innerHTML = '选择一个卡组';
+            }
+            if (studyModeActive && Number(currentStudyGroupId) === targetId) exitStudyMode();
+            renderGroupsSidebar();
+            showToast("卡组已删除");
+        }
+
+        function openEditGroupModal(id, oldName, subjectId) {
+            const modalDiv = document.createElement('div'); modalDiv.className = 'modal';
+            let subjectOptions = '';
+            subjects.forEach(s => {
+                subjectOptions += `<option value="${s.id}" ${(subjectId && Number(subjectId) === Number(s.id)) ? 'selected' : ''}>${escapeHtml(s.name)}</option>`;
+            });
+            modalDiv.innerHTML = `<div class="modal-content"><h3>${id ? "编辑卡组" : "新建卡组"}</h3><div class="form-group"><label>卡组名称</label><input id="groupName" value="${escapeHtml(oldName)}"></div><div class="form-group"><label>所属科目</label><select id="groupSubject">${subjectOptions}</select></div><div style="display:flex; gap:12px; justify-content:end;"><button id="cancelGroup">取消</button><button id="saveGroup" class="btn-primary">确定</button></div></div>`;
+            document.body.appendChild(modalDiv); modalDiv.style.display = 'flex';
+            const close = () => modalDiv.remove();
+            document.getElementById('cancelGroup').onclick = close;
+            document.getElementById('saveGroup').onclick = () => {
+                const newName = document.getElementById('groupName').value.trim();
+                const newSubjectId = document.getElementById('groupSubject').value;
+                if (!newName) { showToast("名称不能为空", true); return; }
+                if (id) {
+                    updateGroup(id, newName, newSubjectId);
+                } else {
+                    addGroup(newName, newSubjectId);
+                }
+                close();
+            };
+        }
+
+        // 卡片操作
+        function addCard(question, answer, groupId = currentGroupId) {
+            if (!groupId) return showToast("请先选择卡组", true);
+            const newId = Date.now();
+            cards.push({ id: newId, groupId, question: question.trim(), answer: answer.trim() });
+            saveData();
+            if (!studyModeActive && Number(groupId) === Number(currentGroupId)) renderCardsOfGroup();
+            renderGroupsSidebar();
+            showToast("卡片已添加");
+        }
+
+        function updateCard(cardId, question, answer) {
+            const idx = cards.findIndex(c => Number(c.id) === Number(cardId));
+            if (idx !== -1) {
+                cards[idx].question = question.trim();
+                cards[idx].answer = answer.trim();
+                saveData();
+                if (!studyModeActive && Number(cards[idx].groupId) === Number(currentGroupId)) renderCardsOfGroup();
+                renderGroupsSidebar();
+                if (studyModeActive && currentStudyCard && Number(currentStudyCard.id) === Number(cardId)) {
+                    currentStudyCard = cards[idx];
+                    refreshStudyCardUI();
+                }
+                showToast("卡片已更新");
+            }
+        }
+
+        function deleteCardById(cardId) {
+            if (!confirm("删除这张卡片？")) return;
+            const card = cards.find(c => Number(c.id) === Number(cardId));
+            const groupId = card?.groupId;
+            cards = cards.filter(c => Number(c.id) !== Number(cardId));
+            saveData();
+            if (studyModeActive && currentStudyCard && Number(currentStudyCard.id) === Number(cardId)) {
+                exitStudyMode();
+                showToast("当前学习的卡片已被删除，退出学习模式");
+            } else {
+                if (!studyModeActive && Number(groupId) === Number(currentGroupId)) renderCardsOfGroup();
+                renderGroupsSidebar();
+            }
+        }
+
+        // 学习模式函数
+        function getMasteredSet(groupId) { const targetId = Number(groupId); if (!masteredCardsMap.has(targetId)) masteredCardsMap.set(targetId, new Set()); return masteredCardsMap.get(targetId); }
+        function getUnmasteredCards(groupId) { const allCards = getCardsByGroup(groupId); const mastered = getMasteredSet(groupId); return allCards.filter(c => !mastered.has(Number(c.id))); }
+        function getRandomUnmasteredCard(groupId) { const unmastered = getUnmasteredCards(groupId); if (unmastered.length === 0) return null; return unmastered[Math.floor(Math.random() * unmastered.length)]; }
+        
+        function startStudyModeWithCard(initialCard) {
+            if (!initialCard) return;
+            const group = groups.find(g => Number(g.id) === Number(initialCard.groupId));
+            if (!group) return;
+            currentStudyGroupId = group.id;
+            currentStudyCard = { ...initialCard };
+            studyAnswerVisible = false;
+            studyModeActive = true;
+            if (!masteredCardsMap.has(Number(currentStudyGroupId))) masteredCardsMap.set(Number(currentStudyGroupId), new Set());
+            renderStudyModeView();
+        }
+
+        function refreshStudyCardUI() {
+            if (!studyModeActive) return;
+            const answerHtml = renderMarkdown(currentStudyCard.answer);
+            const answerDiv = document.getElementById('studyAnswerArea');
+            if (answerDiv) {
+                const markdownDiv = answerDiv.querySelector('.answer-markdown');
+                if (markdownDiv) markdownDiv.innerHTML = answerHtml;
+            }
+            const questionDiv = document.querySelector('.study-question');
+            if (questionDiv) questionDiv.innerHTML = escapeHtml(currentStudyCard.question);
+        }
+
+        let handleKeyDown = null;
+        function renderStudyModeView() {
+            const mainDiv = document.getElementById('mainContent');
+            const group = groups.find(g => Number(g.id) === Number(currentStudyGroupId));
+            const subject = subjects.find(s => Number(s.id) === Number(group?.subjectId));
+            const unmasteredCount = getUnmasteredCards(currentStudyGroupId).length;
+            const totalCount = getCardsByGroup(currentStudyGroupId).length;
+            const masteredCount = totalCount - unmasteredCount;
+            const answerHtml = renderMarkdown(currentStudyCard.answer);
+            const answerClass = studyAnswerVisible ? 'show' : '';
+            const studyHtml = `<div class="study-view" id="studyView"><div class="back-link" id="exitStudyBtn"><i class="fas fa-arrow-left"></i> 返回卡组列表</div><div class="study-card-container"><div class="study-card-header"><span><i class="fas fa-layer-group"></i> ${escapeHtml(subject ? subject.name + ' / ' : '')}${escapeHtml(group.name)}</span><span>📊 已掌握 ${masteredCount} / ${totalCount}</span><button id="editCurrentCardBtn" class="btn-icon"><i class="fas fa-pen"></i> 编辑卡片</button></div><div class="study-body" id="studyBodyClick"><div class="study-question">${escapeHtml(currentStudyCard.question)}</div><div class="study-answer ${answerClass}" id="studyAnswerArea"><div class="answer-markdown">${answerHtml}</div></div><div style="text-align:center; margin-top:1rem; font-size:0.8rem; color:#7f9eb5;">👇 点击卡片任意位置显示答案 | ⌨️ 空格键显示/隐藏答案 | 回车键切换卡片</div></div><div class="study-footer"><button id="randomCardBtn" class="btn-icon"><i class="fas fa-random"></i> 随机抽卡</button><div class="memory-buttons"><button id="rememberBtn" class="btn-memory btn-remember"><i class="fas fa-check-circle"></i> 记住了 (不再出现)</button><button id="forgetBtn" class="btn-memory btn-forget"><i class="fas fa-redo-alt"></i> 没记住 (继续出现)</button></div></div></div></div>`;
+            mainDiv.innerHTML = studyHtml;
+            if (handleKeyDown) document.removeEventListener('keydown', handleKeyDown);
+            handleKeyDown = (e) => {
+                if (!studyModeActive) return;
+                if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+                if (e.code === 'Space') {
+                    e.preventDefault();
+                    studyAnswerVisible = !studyAnswerVisible;
+                    const ansDiv = document.getElementById('studyAnswerArea');
+                    if (ansDiv) studyAnswerVisible ? ansDiv.classList.add('show') : ansDiv.classList.remove('show');
+                }
+                if (e.code === 'Enter') {
+                    e.preventDefault();
+                    const nextCard = getRandomUnmasteredCard(currentStudyGroupId);
+                    if (!nextCard) {
+                        if (getUnmasteredCards(currentStudyGroupId).length === 0) {
+                            showToast("🎉 恭喜！你已经掌握了当前卡组的所有卡片！");
+                            if (confirm("所有卡片已掌握，是否重置本组记忆状态？")) {
+                                masteredCardsMap.set(Number(currentStudyGroupId), new Set());
+                                const newCard = getRandomUnmasteredCard(currentStudyGroupId);
+                                if (newCard) { currentStudyCard = newCard; studyAnswerVisible = false; renderStudyModeView(); }
+                                else exitStudyMode();
+                            }
+                        } else showToast("暂无可抽卡片", true);
+                        return;
+                    }
+                    currentStudyCard = nextCard;
+                    studyAnswerVisible = false;
+                    renderStudyModeView();
+                }
+            };
+            document.addEventListener('keydown', handleKeyDown);
+            document.getElementById('studyBodyClick')?.addEventListener('click', () => {
                 studyAnswerVisible = !studyAnswerVisible;
                 const ansDiv = document.getElementById('studyAnswerArea');
-                if (ansDiv) {
-                    if (studyAnswerVisible) {
-                        ansDiv.classList.add('show');
-                    } else {
-                        ansDiv.classList.remove('show');
-                    }
-                }
-            }
-            
-            // 按回车键切换到下一张卡片
-            if (e.code === 'Enter') {
-                e.preventDefault();
+                if (ansDiv) studyAnswerVisible ? ansDiv.classList.add('show') : ansDiv.classList.remove('show');
+            });
+            document.getElementById('exitStudyBtn')?.addEventListener('click', () => exitStudyMode());
+            document.getElementById('editCurrentCardBtn')?.addEventListener('click', (e) => { e.stopPropagation(); openCardEditModal(currentStudyCard.id, currentStudyCard.question, currentStudyCard.answer); });
+            document.getElementById('randomCardBtn')?.addEventListener('click', () => {
                 const nextCard = getRandomUnmasteredCard(currentStudyGroupId);
                 if (!nextCard) {
                     if (getUnmasteredCards(currentStudyGroupId).length === 0) {
@@ -583,472 +1143,228 @@ function deleteCardById(cardId) {
                         if (confirm("所有卡片已掌握，是否重置本组记忆状态？")) {
                             masteredCardsMap.set(Number(currentStudyGroupId), new Set());
                             const newCard = getRandomUnmasteredCard(currentStudyGroupId);
-                            if (newCard) { 
-                                currentStudyCard = newCard; 
-                                studyAnswerVisible = false; 
-                                renderStudyModeView(); 
-                            } else {
-                                exitStudyMode();
-                            }
+                            if (newCard) { currentStudyCard = newCard; studyAnswerVisible = false; renderStudyModeView(); }
+                            else exitStudyMode();
                         }
-                    } else { 
-                        showToast("暂无可抽卡片", true); 
-                    }
+                    } else showToast("暂无可抽卡片", true);
                     return;
                 }
                 currentStudyCard = nextCard;
                 studyAnswerVisible = false;
                 renderStudyModeView();
-            }
-        };
-        
-        // 添加事件监听器
-        document.addEventListener('keydown', handleKeyDown);
-        
-        // 绑定事件
-        document.getElementById('studyBodyClick')?.addEventListener('click', () => {
-            studyAnswerVisible = !studyAnswerVisible;
-            const ansDiv = document.getElementById('studyAnswerArea');
-            if (ansDiv) {
-                if (studyAnswerVisible) {
-                    ansDiv.classList.add('show');
-                } else {
-                    ansDiv.classList.remove('show');
+            });
+            document.getElementById('rememberBtn')?.addEventListener('click', () => {
+                getMasteredSet(currentStudyGroupId).add(Number(currentStudyCard.id));
+                const nextCard = getRandomUnmasteredCard(currentStudyGroupId);
+                if (!nextCard) {
+                    showToast("🎉 完美！所有卡片已掌握！重置记忆可继续学习。");
+                    if (confirm("本卡组所有卡片已掌握，是否重置记忆重新学习？")) {
+                        masteredCardsMap.set(Number(currentStudyGroupId), new Set());
+                        const freshCard = getRandomUnmasteredCard(currentStudyGroupId);
+                        if (freshCard) { currentStudyCard = freshCard; studyAnswerVisible = false; renderStudyModeView(); }
+                        else exitStudyMode();
+                    } else exitStudyMode();
+                    return;
                 }
-            }
-        });
-        document.getElementById('exitStudyBtn')?.addEventListener('click', () => exitStudyMode());
-        const editBtn = document.getElementById('editCurrentCardBtn');
-        if (editBtn) {
-            editBtn.addEventListener('click', (e) => {
-                e.stopPropagation(); // 阻止事件冒泡
-                console.log('编辑按钮被点击');
-                console.log('当前卡片ID:', currentStudyCard.id);
-                console.log('当前卡片问题:', currentStudyCard.question);
-                openCardEditModal(currentStudyCard.id, currentStudyCard.question, currentStudyCard.answer);
+                currentStudyCard = nextCard;
+                studyAnswerVisible = false;
+                renderStudyModeView();
+            });
+            document.getElementById('forgetBtn')?.addEventListener('click', () => {
+                const masteredSet = getMasteredSet(currentStudyGroupId);
+                if (masteredSet.has(Number(currentStudyCard.id))) masteredSet.delete(Number(currentStudyCard.id));
+                const unmastered = getUnmasteredCards(currentStudyGroupId);
+                if (unmastered.length === 0) {
+                    const anyCard = getCardsByGroup(currentStudyGroupId)[0];
+                    if (anyCard) currentStudyCard = anyCard;
+                } else currentStudyCard = unmastered[Math.floor(Math.random() * unmastered.length)];
+                studyAnswerVisible = false;
+                renderStudyModeView();
             });
         }
-        document.getElementById('randomCardBtn')?.addEventListener('click', () => {
-            const nextCard = getRandomUnmasteredCard(currentStudyGroupId);
-            if (!nextCard) {
-                if (getUnmasteredCards(currentStudyGroupId).length === 0) {
-                    showToast("🎉 恭喜！你已经掌握了当前卡组的所有卡片！");
-                    if (confirm("所有卡片已掌握，是否重置本组记忆状态？")) {
-                        masteredCardsMap.set(Number(currentStudyGroupId), new Set());
-                        const newCard = getRandomUnmasteredCard(currentStudyGroupId);
-                        if (newCard) { currentStudyCard = newCard; studyAnswerVisible = false; renderStudyModeView(); }
-                        else exitStudyMode();
-                    }
-                } else { showToast("暂无可抽卡片", true); }
-                return;
-            }
-            currentStudyCard = nextCard;
+
+        const originalExitStudyMode = exitStudyMode;
+        exitStudyMode = function () { if (handleKeyDown) { document.removeEventListener('keydown', handleKeyDown); handleKeyDown = null; } return originalExitStudyMode.apply(this, arguments); };
+        function exitStudyMode() {
+            studyModeActive = false;
+            currentStudyGroupId = null;
+            currentStudyCard = null;
             studyAnswerVisible = false;
-            renderStudyModeView();
-        });
-        document.getElementById('rememberBtn')?.addEventListener('click', () => {
-            const masteredSet = getMasteredSet(currentStudyGroupId);
-            masteredSet.add(Number(currentStudyCard.id));
-            const nextCard = getRandomUnmasteredCard(currentStudyGroupId);
-            if (!nextCard) {
-                showToast("🎉 完美！所有卡片已掌握！重置记忆可继续学习。");
-                if (confirm("本卡组所有卡片已掌握，是否重置记忆重新学习？")) {
-                    masteredCardsMap.set(Number(currentStudyGroupId), new Set());
-                    const freshCard = getRandomUnmasteredCard(currentStudyGroupId);
-                    if (freshCard) { currentStudyCard = freshCard; studyAnswerVisible = false; renderStudyModeView(); }
-                    else exitStudyMode();
-                } else { exitStudyMode(); }
-                return;
+            const mainDiv = document.getElementById('mainContent');
+            const oldStudyView = document.getElementById('studyView');
+            if (oldStudyView) oldStudyView.remove();
+            let header = document.getElementById('contentHeader');
+            let cardsContainer = document.getElementById('cardsListContainer');
+            if (!header || !cardsContainer) {
+                mainDiv.innerHTML = `<div class="content-header" id="contentHeader"><div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;"><h3 id="currentGroupTitle">选择一个卡组</h3><div style="position: relative; flex: 1; max-width: 300px;"><input type="text" id="cardSearchInput" placeholder="搜索卡片..." style="width: 100%; padding: 0.6rem 1rem; border-radius: 2rem; border: 1px solid #cde0ea; font-size: 0.9rem;" /></div></div><div class="toolbar-buttons" id="groupToolbar" style="display: none;"><button class="btn-icon" id="addCardBtn"><i class="fas fa-plus"></i> 新增卡片</button><button class="btn-icon" id="downloadTemplateBtn"><i class="fas fa-download"></i> 下载模版</button><button class="btn-icon" id="importExcelBtn"><i class="fas fa-upload"></i> 导入Excel</button><button class="btn-icon" id="exportExcelBtn"><i class="fas fa-file-excel"></i> 导出Excel</button><button class="btn-icon btn-primary" id="startStudyBtn"><i class="fas fa-graduation-cap"></i> 开始学习</button></div></div><div id="cardsListContainer" class="cards-grid"></div>`;
             }
-            currentStudyCard = nextCard;
-            studyAnswerVisible = false;
-            renderStudyModeView();
-        });
-        document.getElementById('forgetBtn')?.addEventListener('click', () => {
-            const masteredSet = getMasteredSet(currentStudyGroupId);
-            if (masteredSet.has(Number(currentStudyCard.id))) masteredSet.delete(Number(currentStudyCard.id));
-            const unmastered = getUnmasteredCards(currentStudyGroupId);
-            if (unmastered.length === 0) {
-                const anyCard = getCardsByGroup(currentStudyGroupId)[0];
-                if (anyCard) currentStudyCard = anyCard;
-            } else {
-                const randomIdx = Math.floor(Math.random() * unmastered.length);
-                currentStudyCard = unmastered[randomIdx];
-            }
-            studyAnswerVisible = false;
-            renderStudyModeView();
-        });
-    }
-    
-    // 重写exitStudyMode函数，确保移除键盘事件监听器
-    const originalExitStudyMode = exitStudyMode;
-    exitStudyMode = function() {
-        if (handleKeyDown) {
-            document.removeEventListener('keydown', handleKeyDown);
-            handleKeyDown = null;
-        }
-        return originalExitStudyMode.apply(this, arguments);
-    };
-    
-    function exitStudyMode() {
-        studyModeActive = false;
-        currentStudyGroupId = null;
-        currentStudyCard = null;
-        studyAnswerVisible = false;
-        // 重建右侧内容：保留 header 和 cards 容器
-        const mainDiv = document.getElementById('mainContent');
-        const oldStudyView = document.getElementById('studyView');
-        if (oldStudyView) oldStudyView.remove();
-        // 确保结构存在
-        let header = document.getElementById('contentHeader');
-        let cardsContainer = document.getElementById('cardsListContainer');
-        if (!header || !cardsContainer) {
-            mainDiv.innerHTML = `
-                <div class="content-header" id="contentHeader">
-                    <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
-                        <h3 id="currentGroupTitle">选择一个卡组</h3>
-                        <div style="position: relative; flex: 1; max-width: 300px;">
-                            <input type="text" id="cardSearchInput" placeholder="搜索卡片..." style="width: 100%; padding: 0.6rem 1rem; border-radius: 2rem; border: 1px solid #cde0ea; font-size: 0.9rem;" />
-                        </div>
-                    </div>
-                    <div class="toolbar-buttons" id="groupToolbar" style="display: none;">
-                        <button class="btn-icon" id="addCardBtn"><i class="fas fa-plus"></i> 新增卡片</button>
-                        <button class="btn-icon" id="downloadTemplateBtn"><i class="fas fa-download"></i> 下载模版</button>
-                        <button class="btn-icon" id="importExcelBtn"><i class="fas fa-upload"></i> 导入Excel</button>
-                        <button class="btn-icon" id="exportExcelBtn"><i class="fas fa-file-excel"></i> 导出Excel</button>
-                        <button class="btn-icon btn-primary" id="startStudyBtn"><i class="fas fa-graduation-cap"></i> 开始学习</button>
-                    </div>
-                </div>
-                <div id="cardsListContainer" class="cards-grid"></div>
-            `;
-        }
-        if (currentGroupId) {
-            document.getElementById('currentGroupTitle').innerHTML = `<i class="fas fa-folder-open"></i> ${escapeHtml(groups.find(g=>Number(g.id)===Number(currentGroupId))?.name || '卡组')}`;
-            document.getElementById('groupToolbar').style.display = 'flex';
-            renderCardsOfGroup();
-        } else {
-            document.getElementById('cardsListContainer').innerHTML = '<div class="empty-placeholder">请选择卡组</div>';
-            document.getElementById('groupToolbar').style.display = 'none';
-            document.getElementById('currentGroupTitle').innerHTML = '选择一个卡组';
-        }
-        bindToolbarEvents();
-        bindSearchEvents();
-    }
-    
-    // ---------- Excel 导入导出 (修复：正确解析列名，确保卡片添加) ----------
-    function downloadTemplate() {
-        const wsData = [["卡组", "题目", "答案"], ["示例卡组", "什么是递归？", "递归是函数调用自身的技术。\n**代码**```python\ndef fact(n): return 1 if n<=1 else n*fact(n-1)```"]];
-        const ws = XLSX.utils.aoa_to_sheet(wsData);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "导入模版");
-        XLSX.writeFile(wb, `卡片导入模版_含卡组.xlsx`);
-        showToast("模版已下载，包含「卡组」「题目」「答案」列");
-    }
-    
-    function triggerImport() {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = '.xlsx, .xls';
-        input.onchange = (e) => {
-            const file = e.target.files[0];
-            if (file) importExcelWithGroups(file);
-        };
-        input.click();
-    }
-    
-    function importExcelWithGroups(file) {
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-            const data = new Uint8Array(ev.target.result);
-            const workbook = XLSX.read(data, { type: 'array' });
-            const sheet = workbook.Sheets[workbook.SheetNames[0]];
-            const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
-            if (!rows.length) { showToast("Excel 文件无数据", true); return; }
-            
-            let addedCards = 0;
-            const newCardsToAdd = [];
-            const newGroupsToAdd = []; // 暂存新卡组，避免重复创建
-            
-            for (let row of rows) {
-                // 多列名兼容
-                let groupName = row["卡组"] || row["group"] || row["卡组名称"] || "";
-                let question = row["题目"] || row["question"] || "";
-                let answer = row["答案"] || row["answer"] || "";
-                
-                if (!question && !answer) continue; // 空行跳过
-                if (!question) question = "无标题";
-                if (!answer) answer = "";
-                
-                let targetGroupId = null;
-                if (groupName) {
-                    let existGroup = groups.find(g => g.name === groupName);
-                    if (existGroup) {
-                        targetGroupId = existGroup.id;
-                    } else {
-                        // 检查是否已经在本次导入中创建过
-                        let tempGroup = newGroupsToAdd.find(g => g.name === groupName);
-                        if (tempGroup) {
-                            targetGroupId = tempGroup.id;
-                        } else {
-                            const newGroupId = Date.now();
-                            newGroupsToAdd.push({ id: newGroupId, name: groupName });
-                            targetGroupId = newGroupId;
-                        }
-                    }
-                } else {
-                    // 未指定卡组，导入到当前选中的卡组；如果未选中，则跳过
-                    if (currentGroupId) {
-                        targetGroupId = currentGroupId;
-                    } else {
-                        showToast("未指定卡组且未选中任何卡组，部分卡片被跳过", true);
-                        continue;
-                    }
-                }
-                
-                const newCardId = Date.now();
-                newCardsToAdd.push({
-                    id: newCardId,
-                    groupId: targetGroupId,
-                    question: question.trim(),
-                    answer: answer.trim()
-                });
-                addedCards++;
-            }
-            
-            if (newGroupsToAdd.length) {
-                groups.push(...newGroupsToAdd);
-            }
-            if (newCardsToAdd.length) {
-                cards.push(...newCardsToAdd);
-            }
-            
-            if (addedCards === 0) {
-                showToast("未发现有效的卡片数据", true);
-                return;
-            }
-            
-            saveData();
-            renderGroupsSidebar();
-            // 如果当前选中的卡组是导入涉及到的，刷新卡片列表
             if (currentGroupId) {
-                const hasRelated = newCardsToAdd.some(c => Number(c.groupId) === Number(currentGroupId));
-                if (hasRelated) renderCardsOfGroup();
-            }
-            showToast(`成功导入 ${addedCards} 张卡片，${newGroupsToAdd.length} 个新卡组`);
-        };
-        reader.onerror = () => showToast("文件读取失败", true);
-        reader.readAsArrayBuffer(file);
-    }
-    
-    function exportGroupExcel() {
-        // 创建导出选项对话框
-        const modalDiv = document.createElement('div');
-        modalDiv.className = 'modal';
-        modalDiv.innerHTML = `
-            <div class="modal-content" style="min-width: 300px;">
-                <h3>选择导出范围</h3>
-                <div style="margin: 1.5rem 0;">
-                    <label style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.8rem; cursor: pointer; white-space: nowrap;">
-                        <span style="white-space: nowrap;">导出当前卡组 (${currentGroupId ? getCardsByGroup(currentGroupId).length : 0} 张卡片)</span>
-                        <input type="radio" name="exportScope" value="current" ${currentGroupId ? 'checked' : 'disabled'} />
-                    </label>
-                    <label style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.8rem; cursor: pointer; white-space: nowrap;">
-                        <span style="white-space: nowrap;">导出全部卡组 (${cards.length} 张卡片)</span>
-                        <input type="radio" name="exportScope" value="all" checked />
-                    </label>
-                </div>
-                <div style="display:flex; gap:12px; justify-content:end;">
-                    <button id="exportCancel">取消</button>
-                    <button id="exportConfirm" class="btn-primary">确定</button>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(modalDiv);
-        modalDiv.style.display = 'flex';
-        
-        const closeModal = () => modalDiv.remove();
-        document.getElementById('exportCancel').onclick = closeModal;
-        
-        document.getElementById('exportConfirm').onclick = () => {
-            const selectedScope = document.querySelector('input[name="exportScope"]:checked')?.value;
-            let exportCards = [];
-            
-            if (selectedScope === 'current' && currentGroupId) {
-                exportCards = getCardsByGroup(currentGroupId);
+                const group = groups.find(g => Number(g.id) === Number(currentGroupId));
+                const subject = subjects.find(s => Number(s.id) === Number(group?.subjectId));
+                document.getElementById('currentGroupTitle').innerHTML = `<i class="fas fa-folder-open"></i> ${escapeHtml(subject ? subject.name + ' / ' : '')}${escapeHtml(group?.name || '卡组')}`;
+                document.getElementById('groupToolbar').style.display = 'flex';
+                renderCardsOfGroup();
             } else {
-                exportCards = cards;
+                document.getElementById('cardsListContainer').innerHTML = '<div class="empty-placeholder">请选择卡组</div>';
+                document.getElementById('groupToolbar').style.display = 'none';
+                document.getElementById('currentGroupTitle').innerHTML = '选择一个卡组';
             }
-            
-            if (!exportCards.length) {
-                showToast("无卡片可导出", true);
-                closeModal();
-                return;
-            }
-            
-            const exportData = exportCards.map(card => ({
-                "卡组": getGroupNameById(card.groupId),
-                "题目": card.question,
-                "答案": card.answer
-            }));
-            
-            const ws = XLSX.utils.json_to_sheet(exportData);
+            bindToolbarEvents();
+            bindSearchEvents();
+        }
+
+        // Excel 导入导出
+        function downloadTemplate() {
+            const wsData = [["科目", "卡组", "题目", "答案"], ["计算机科学", "操作系统", "进程的三种状态", "就绪态、运行态、阻塞态"]];
+            const ws = XLSX.utils.aoa_to_sheet(wsData);
             const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "卡片数据");
-            XLSX.writeFile(wb, `卡片导出_${new Date().toISOString().slice(0,19)}.xlsx`);
-            showToast(`导出 ${exportCards.length} 张卡片`);
-            closeModal();
-        };
-    }
-    
-    // 模态框及辅助
-    let currentEditCardId = null;
-    function openCardAddModal() { currentEditCardId = null; showCardModal("新建卡片", "", ""); }
-    function openCardEditModal(id, q, a) { currentEditCardId = id; showCardModal("编辑卡片", q, a); }
-    function showCardModal(title, qVal, aVal) {
-        const modalDiv = document.createElement('div'); 
-        modalDiv.className = 'modal';
-        modalDiv.innerHTML = `
-            <div class="modal-content">
-                <h3>${title}</h3>
-                <div class="form-group">
-                    <label>题目</label>
-                    <input id="modalQuestion" value="${escapeHtml(qVal)}">
-                </div>
-                <div class="form-group">
-                    <label>答案 (Markdown)</label>
-                    <textarea id="modalAnswer" rows="6">${escapeHtml(aVal)}</textarea>
-                </div>
-                <div style="display:flex; gap:12px; justify-content:end;">
-                    <button id="modalCancel">取消</button>
-                    <button id="modalSave" class="btn-primary">保存</button>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(modalDiv); 
-        modalDiv.style.display = 'flex';
-        
-        const close = () => {
-            if (modalDiv && modalDiv.parentNode) {
-                modalDiv.parentNode.removeChild(modalDiv);
-            }
-        };
-        
-        const cancelBtn = document.getElementById('modalCancel');
-        if (cancelBtn) {
-            cancelBtn.onclick = close;
+            XLSX.utils.book_append_sheet(wb, ws, "导入模版");
+            XLSX.writeFile(wb, `卡片导入模版_含科目.xlsx`);
+            showToast("模版已下载，包含「科目」「卡组」「题目」「答案」列");
         }
-        
-        const saveBtn = document.getElementById('modalSave');
-        if (saveBtn) {
-            saveBtn.onclick = function(e) {
-                e.stopPropagation(); // 阻止事件冒泡
-                console.log('保存按钮被点击');
-                
-                const questionInput = document.getElementById('modalQuestion');
-                const answerInput = document.getElementById('modalAnswer');
-                
-                console.log('问题输入框:', questionInput);
-                console.log('答案输入框:', answerInput);
-                
-                if (questionInput && answerInput) {
-                    const newQ = questionInput.value.trim();
-                    const newA = answerInput.value;
-                    
-                    console.log('新题目:', newQ);
-                    console.log('新答案:', newA);
-                    
-                    if (!newQ) {
-                        showToast("题目不能为空", true);
-                        return;
-                    }
-                    
-                    if (currentEditCardId === null) {
-                        console.log('添加新卡片');
-                        addCard(newQ, newA);
+
+        function triggerImport() { const input = document.createElement('input'); input.type = 'file'; input.accept = '.xlsx, .xls'; input.onchange = (e) => { if (e.target.files[0]) importExcelWithGroups(e.target.files[0]); }; input.click(); }
+        function importExcelWithGroups(file) {
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                const data = new Uint8Array(ev.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+                if (!rows.length) { showToast("Excel 文件无数据", true); return; }
+                let addedCards = 0;
+                const newCardsToAdd = [];
+                const newGroupsToAdd = [];
+                const newSubjectsToAdd = [];
+                let uniqueIdCounter = 0;
+                for (let row of rows) {
+                    let subjectName = row["科目"] || "";
+                    let groupName = row["卡组"] || row["group"] || "";
+                    let question = row["题目"] || row["question"] || "";
+                    let answer = row["答案"] || row["answer"] || "";
+                    if (!question && !answer) continue;
+                    if (!question) question = "无标题";
+                    if (!answer) answer = "";
+
+                    let targetSubjectId = null;
+                    if (subjectName) {
+                        let existSubject = subjects.find(s => s.name === subjectName);
+                        if (existSubject) targetSubjectId = existSubject.id;
+                        else {
+                            let tempSubject = newSubjectsToAdd.find(s => s.name === subjectName);
+                            if (tempSubject) targetSubjectId = tempSubject.id;
+                            else { const newId = Date.now() + uniqueIdCounter++; newSubjectsToAdd.push({ id: newId, name: subjectName }); targetSubjectId = newId; }
+                        }
                     } else {
-                        console.log('更新卡片，ID:', currentEditCardId);
-                        updateCard(currentEditCardId, newQ, newA);
+                        if (subjects.length > 0) targetSubjectId = subjects[0].id;
+                        else { showToast("无科目且未创建科目，请先创建科目", true); continue; }
                     }
-                    
-                    console.log('关闭模态框');
-                    close();
-                } else {
-                    console.log('输入框未找到');
+
+                    let targetGroupId = null;
+                    if (groupName) {
+                        let existGroup = groups.find(g => g.name === groupName && Number(g.subjectId) === Number(targetSubjectId));
+                        if (existGroup) targetGroupId = existGroup.id;
+                        else {
+                            let tempGroup = newGroupsToAdd.find(g => g.name === groupName && g.subjectId === targetSubjectId);
+                            if (tempGroup) targetGroupId = tempGroup.id;
+                            else { const newId = Date.now() + uniqueIdCounter++; newGroupsToAdd.push({ id: newId, name: groupName, subjectId: targetSubjectId }); targetGroupId = newId; }
+                        }
+                    } else {
+                        showToast("卡组名称为空，跳过", true); continue;
+                    }
+
+                    newCardsToAdd.push({ id: Date.now() + uniqueIdCounter++, groupId: targetGroupId, question: question.trim(), answer: answer.trim() });
+                    addedCards++;
                 }
-            };
-        }
-    }
-    
-    function openEditGroupModal(id, oldName) {
-        const modalDiv = document.createElement('div'); modalDiv.className = 'modal';
-        modalDiv.innerHTML = `<div class="modal-content"><h3>${id ? "编辑卡组" : "新建卡组"}</h3><div class="form-group"><label>卡组名称</label><input id="groupName" value="${escapeHtml(oldName)}"></div><div style="display:flex; gap:12px; justify-content:end;"><button id="cancelGroup">取消</button><button id="saveGroup" class="btn-primary">确定</button></div></div>`;
-        document.body.appendChild(modalDiv); modalDiv.style.display = 'flex';
-        const close = () => modalDiv.remove();
-        document.getElementById('cancelGroup').onclick = close;
-        document.getElementById('saveGroup').onclick = () => {
-            const newName = document.getElementById('groupName').value.trim();
-            if (!newName) { showToast("名称不能为空", true); return; }
-            if (id) {
-                const g = groups.find(g => Number(g.id) === Number(id));
-                if (g) { g.name = newName; saveData(); renderGroupsSidebar(); if (Number(currentGroupId) === Number(id)) document.getElementById('currentGroupTitle').innerHTML = `<i class="fas fa-folder-open"></i> ${escapeHtml(newName)}`; showToast("卡组已更新"); }
-            } else {
-                const newId = Date.now();
-                groups.push({ id: newId, name: newName });
+                if (newSubjectsToAdd.length) subjects.push(...newSubjectsToAdd);
+                if (newGroupsToAdd.length) groups.push(...newGroupsToAdd);
+                if (newCardsToAdd.length) cards.push(...newCardsToAdd);
+                if (addedCards === 0) { showToast("未发现有效的卡片数据", true); return; }
                 saveData();
                 renderGroupsSidebar();
-                showToast("卡组已创建");
-            }
-            close();
-        };
-    }
-    
-    function bindToolbarEvents() {
-        document.getElementById('addCardBtn')?.addEventListener('click', () => openCardAddModal());
-        document.getElementById('downloadTemplateBtn')?.addEventListener('click', downloadTemplate);
-        document.getElementById('importExcelBtn')?.addEventListener('click', triggerImport);
-        document.getElementById('exportExcelBtn')?.addEventListener('click', exportGroupExcel);
-        document.getElementById('startStudyBtn')?.addEventListener('click', () => {
-            const groupCards = getCardsByGroup(currentGroupId);
-            if (!groupCards.length) { showToast("当前卡组无卡片，请先添加", true); return; }
-            let startCard = null;
-            const unmastered = getUnmasteredCards(currentGroupId);
-            if (unmastered.length) startCard = unmastered[0];
-            else startCard = groupCards[0];
-            if (startCard) startStudyModeWithCard(startCard);
-        });
-    }
-    
-    function bindSearchEvents() {
-        // 卡组搜索
-        const groupSearchInput = document.getElementById('groupSearchInput');
-        if (groupSearchInput) {
-            groupSearchInput.addEventListener('input', (e) => {
-                groupSearchKeyword = e.target.value;
-                renderGroupsSidebar();
+                if (currentGroupId) {
+                    const hasRelated = newCardsToAdd.some(c => Number(c.groupId) === Number(currentGroupId));
+                    if (hasRelated) renderCardsOfGroup();
+                }
+                showToast(`成功导入 ${addedCards} 张卡片，${newGroupsToAdd.length} 个新卡组，${newSubjectsToAdd.length} 个新科目`);
+            };
+            reader.onerror = () => showToast("文件读取失败", true);
+            reader.readAsArrayBuffer(file);
+        }
+
+        function exportGroupExcel() {
+            const modalDiv = document.createElement('div'); modalDiv.className = 'modal';
+            modalDiv.innerHTML = `<div class="modal-content" style="min-width: 300px;"><h3>选择导出范围</h3><div style="margin: 1.5rem 0;"><label style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.8rem; cursor: pointer; white-space: nowrap;"><span>导出当前卡组 (${currentGroupId ? getCardsByGroup(currentGroupId).length : 0} 张卡片)</span><input type="radio" name="exportScope" value="current" ${currentGroupId ? 'checked' : 'disabled'} /></label><label style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.8rem; cursor: pointer; white-space: nowrap;"><span>导出全部卡组 (${cards.length} 张卡片)</span><input type="radio" name="exportScope" value="all" checked /></label></div><div style="display:flex; gap:12px; justify-content:end;"><button id="exportCancel">取消</button><button id="exportConfirm" class="btn-primary">确定</button></div></div>`;
+            document.body.appendChild(modalDiv); modalDiv.style.display = 'flex';
+            const closeModal = () => modalDiv.remove();
+            document.getElementById('exportCancel').onclick = closeModal;
+            document.getElementById('exportConfirm').onclick = () => {
+                const selectedScope = document.querySelector('input[name="exportScope"]:checked')?.value;
+                let exportCards = (selectedScope === 'current' && currentGroupId) ? getCardsByGroup(currentGroupId) : cards;
+                if (!exportCards.length) { showToast("无卡片可导出", true); closeModal(); return; }
+                const exportData = exportCards.map(card => {
+                    const group = groups.find(g => Number(g.id) === Number(card.groupId));
+                    const subject = subjects.find(s => Number(s.id) === Number(group?.subjectId));
+                    return { "科目": subject ? subject.name : "", "卡组": group ? group.name : "", "题目": card.question, "答案": card.answer };
+                });
+                const ws = XLSX.utils.json_to_sheet(exportData);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "卡片数据");
+                XLSX.writeFile(wb, `卡片导出_${new Date().toISOString().slice(0, 19)}.xlsx`);
+                showToast(`导出 ${exportCards.length} 张卡片`);
+                closeModal();
+            };
+        }
+
+        // 卡片模态框
+        let currentEditCardId = null;
+        function openCardAddModal() { currentEditCardId = null; showCardModal("新建卡片", "", ""); }
+        function openCardEditModal(id, q, a) { currentEditCardId = id; showCardModal("编辑卡片", q, a); }
+        function showCardModal(title, qVal, aVal) {
+            const modalDiv = document.createElement('div'); modalDiv.className = 'modal';
+            modalDiv.innerHTML = `<div class="modal-content"><h3>${title}</h3><div class="form-group"><label>题目</label><input id="modalQuestion" value="${escapeHtml(qVal)}"></div><div class="form-group"><label>答案 (Markdown)</label><textarea id="modalAnswer" rows="6">${escapeHtml(aVal)}</textarea></div><div style="display:flex; gap:12px; justify-content:end;"><button id="modalCancel">取消</button><button id="modalSave" class="btn-primary">保存</button></div></div>`;
+            document.body.appendChild(modalDiv); modalDiv.style.display = 'flex';
+            const close = () => { if (modalDiv && modalDiv.parentNode) modalDiv.parentNode.removeChild(modalDiv); };
+            document.getElementById('modalCancel').onclick = close;
+            document.getElementById('modalSave').onclick = (e) => { e.stopPropagation(); const questionInput = document.getElementById('modalQuestion'); const answerInput = document.getElementById('modalAnswer'); if (questionInput && answerInput) { const newQ = questionInput.value.trim(); const newA = answerInput.value; if (!newQ) { showToast("题目不能为空", true); return; } if (currentEditCardId === null) addCard(newQ, newA); else updateCard(currentEditCardId, newQ, newA); close(); } };
+        }
+
+        function bindToolbarEvents() {
+            document.getElementById('addCardBtn')?.addEventListener('click', () => openCardAddModal());
+			document.getElementById('exportJsonBtn')?.addEventListener('click', exportToJson);
+            document.getElementById('downloadTemplateBtn')?.addEventListener('click', downloadTemplate);
+            document.getElementById('importExcelBtn')?.addEventListener('click', triggerImport);
+            document.getElementById('exportExcelBtn')?.addEventListener('click', exportGroupExcel);
+            document.getElementById('startStudyBtn')?.addEventListener('click', () => {
+                const groupCards = getCardsByGroup(currentGroupId);
+                if (!groupCards.length) { showToast("当前卡组无卡片，请先添加", true); return; }
+                let startCard = null;
+                const unmastered = getUnmasteredCards(currentGroupId);
+                if (unmastered.length) startCard = unmastered[0];
+                else startCard = groupCards[0];
+                if (startCard) startStudyModeWithCard(startCard);
             });
         }
-        
-        // 卡片搜索
-        const cardSearchInput = document.getElementById('cardSearchInput');
-        if (cardSearchInput) {
-            cardSearchInput.addEventListener('input', (e) => {
-                cardSearchKeyword = e.target.value;
-                renderCardsOfGroup();
-            });
+
+        function bindSearchEvents() {
+            const groupSearchInput = document.getElementById('groupSearchInput');
+            if (groupSearchInput) groupSearchInput.addEventListener('input', (e) => { groupSearchKeyword = e.target.value; renderGroupsSidebar(); });
+            const cardSearchInput = document.getElementById('cardSearchInput');
+            if (cardSearchInput) cardSearchInput.addEventListener('input', (e) => { cardSearchKeyword = e.target.value; renderCardsOfGroup(); });
         }
-    }
-    
-    function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, function(m){ if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
-    
-    function init() {
-        initMarkdown();
-        loadData();
-        renderGroupsSidebar();
-        bindToolbarEvents();
-        bindSearchEvents();
-        document.getElementById('sidebarAddGroupBtn').addEventListener('click', () => openEditGroupModal(null, ''));
-    }
-    init();
-</script>
+
+        function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, function (m) { if (m === '&') return '&amp;'; if (m === '<') return '&lt;'; if (m === '>') return '&gt;'; return m; }); }
+
+        async function init() {
+            initMarkdown();
+            await loadData();
+            renderGroupsSidebar();
+            bindToolbarEvents();
+            bindSearchEvents();
+            document.getElementById('newSubjectBtn').addEventListener('click', () => openEditSubjectModal(null, ''));
+        }
+        init();
+    </script>
 </body>
+
 </html>
