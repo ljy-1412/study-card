@@ -793,14 +793,13 @@
                 return;
             }
 
-            let html = '';
-            
-            // 显示普通科目和卡组
+            // 先渲染所有普通科目和卡组
+            let subjectsHtml = '';
             for (let subj of subjects) {
                 const subjGroups = groupsBySubject.get(subj.id) || [];
                 const isCollapsed = collapsedSubjects.has(subj.id);
                 const chevronClass = isCollapsed ? 'fa-chevron-right' : 'fa-chevron-down';
-                html += `
+                subjectsHtml += `
                     <div class="subject-container" data-subject-id="${subj.id}">
                         <div class="subject-header" data-subject-id="${subj.id}">
                             <div class="subject-title">
@@ -817,12 +816,12 @@
                         <div class="group-list-under-subject ${isCollapsed ? 'collapsed' : ''}" data-subject-id="${subj.id}">
                 `;
                 if (subjGroups.length === 0) {
-                    html += `<div style="padding:0.5rem; color:#aaa; font-size:0.8rem; text-align:center;">暂无卡组</div>`;
+                    subjectsHtml += `<div style="padding:0.5rem; color:#aaa; font-size:0.8rem; text-align:center;">暂无卡组</div>`;
                 } else {
                     subjGroups.forEach(group => {
                         const count = getCardsByGroup(group.id).length;
                         const activeClass = (Number(currentGroupId) === Number(group.id)) ? 'active' : '';
-                        html += `
+                        subjectsHtml += `
                             <div class="group-item ${activeClass}" data-id="${group.id}">
                                 <div class="group-info">
                                     <div class="group-name">📁 ${escapeHtml(group.name)}</div>
@@ -836,28 +835,34 @@
                         `;
                     });
                 }
-                html += `</div></div>`;
+                subjectsHtml += `</div></div>`;
             }
             
-            // 显示复习卡组（放在最下面）
+            // 显示复习卡组（固定在最下面）
             const reviewCount = reviewCards.length;
             const reviewActiveClass = (currentGroupId === REVIEW_GROUP_ID) ? 'active' : '';
-            html += `
-                <div class="subject-container" style="margin-top: 1.5rem;">
-                    <div class="subject-header ${reviewActiveClass}" style="background: #e3f0f9; cursor: pointer;" data-id="${REVIEW_GROUP_ID}">
-                        <div class="subject-title">
-                            <i class="fas fa-star"></i>
-                            <span>⭐ 复习卡组</span>
-                            <span style="font-size:0.7rem; color:#6c8ea0;">(${reviewCount}张卡片)</span>
-                        </div>
-                        <div class="subject-actions">
-                            <button class="clear-review-group" title="清空复习卡组"><i class="fas fa-trash"></i></button>
-                        </div>
+            const reviewHtml = `
+                <div class="subject-header ${reviewActiveClass}" style="background: #e3f0f9; cursor: pointer;" data-id="${REVIEW_GROUP_ID}">
+                    <div class="subject-title">
+                        <i class="fas fa-star"></i>
+                        <span>⭐ 复习卡组</span>
+                        <span style="font-size:0.7rem; color:#6c8ea0;">(${reviewCount}张卡片)</span>
+                    </div>
+                    <div class="subject-actions">
+                        <button class="clear-review-group" title="清空复习卡组"><i class="fas fa-trash"></i></button>
                     </div>
                 </div>
             `;
             
-            container.innerHTML = html;
+            // 组合HTML，将复习卡组固定在最底部
+            container.innerHTML = `
+                <div style="flex: 1; overflow-y: auto; padding-bottom: 80px;">
+                    ${subjectsHtml}
+                </div>
+                <div style="position: fixed; bottom: 0; left: 0; width: 300px; background: #ffffff; border-top: 1px solid #eef2f8; padding: 1rem; box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.03); z-index: 100; box-sizing: border-box;">
+                    ${reviewHtml}
+                </div>
+            `;
 
             // 折叠/展开和复习卡组点击
             document.querySelectorAll('.subject-header').forEach(header => {
