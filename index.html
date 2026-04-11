@@ -34,6 +34,7 @@
             flex-direction: column;
             box-shadow: 2px 0 12px rgba(0, 0, 0, 0.03);
             overflow-y: auto;
+            transition: width 0.3s ease;
         }
         .sidebar-header {
             padding: 1rem 1.2rem 0.5rem 1.2rem;
@@ -448,6 +449,40 @@
             text-align: center;
             padding: 3rem;
             color: #6c8ea0;
+            white-space: nowrap;
+        }
+        .toggle-sidebar-btn {
+            background: #2c7aa0;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: all 0.2s ease;
+        }
+        
+        .toggle-sidebar-btn:hover {
+            background: #1f5f7a;
+            transform: scale(1.05);
+        }
+        
+        /* 侧边栏隐藏状态 */
+        .app-layout.sidebar-hidden .groups-sidebar {
+            width: 0;
+            overflow: hidden;
+            border-right: none;
+            transition: width 0.3s ease;
+        }
+        
+        .app-layout.sidebar-hidden .main-content {
+            margin-left: 0;
+            width: 100%;
         }
         .modal {
             display: none;
@@ -530,6 +565,7 @@
         <div class="main-content" id="mainContent">
             <div class="content-header" id="contentHeader">
                 <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                    <button id="toggleSidebarBtn" class="toggle-sidebar-btn" title="切换侧边栏"><i class="fas fa-bars"></i></button>
                     <h3 id="currentGroupTitle">选择一个卡组</h3>
                     <div style="position: relative; flex: 1; max-width: 300px;">
                         <input type="text" id="cardSearchInput" placeholder="搜索卡片..."
@@ -1613,7 +1649,7 @@
             let header = document.getElementById('contentHeader');
             let cardsContainer = document.getElementById('cardsListContainer');
             if (!header || !cardsContainer) {
-                mainDiv.innerHTML = `<div class="content-header" id="contentHeader"><div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;"><h3 id="currentGroupTitle">选择一个卡组</h3><div style="position: relative; flex: 1; max-width: 300px;"><input type="text" id="cardSearchInput" placeholder="搜索卡片..." style="width: 100%; padding: 0.6rem 1rem; border-radius: 2rem; border: 1px solid #cde0ea; font-size: 0.9rem;" /></div></div><div class="toolbar-buttons" id="groupToolbar" style="display: none;"><button class="btn-icon" id="addCardBtn"><i class="fas fa-plus"></i> 新增卡片</button><button class="btn-icon" id="downloadTemplateBtn"><i class="fas fa-download"></i> 下载模版</button><button class="btn-icon" id="importExcelBtn"><i class="fas fa-upload"></i> 导入Excel</button><button class="btn-icon" id="exportExcelBtn"><i class="fas fa-file-excel"></i> 导出Excel</button><button class="btn-icon" id="loadJsonBtn"><i class="fas fa-file-import"></i> 加载JSON</button><button class="btn-icon" id="exportJsonBtn"><i class="fas fa-file-code"></i> 导出JSON</button><button class="btn-icon btn-primary" id="startStudyBtn"><i class="fas fa-graduation-cap"></i> 开始学习</button></div></div><div id="cardsListContainer" class="cards-grid"></div>`;
+                mainDiv.innerHTML = `<div class="content-header" id="contentHeader"><div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;"><button id="toggleSidebarBtn" class="toggle-sidebar-btn" title="切换侧边栏"><i class="fas fa-bars"></i></button><h3 id="currentGroupTitle">选择一个卡组</h3><div style="position: relative; flex: 1; max-width: 300px;"><input type="text" id="cardSearchInput" placeholder="搜索卡片..." style="width: 100%; padding: 0.6rem 1rem; border-radius: 2rem; border: 1px solid #cde0ea; font-size: 0.9rem;" /></div></div><div class="toolbar-buttons" id="groupToolbar" style="display: none;"><button class="btn-icon" id="addCardBtn"><i class="fas fa-plus"></i> 新增卡片</button><button class="btn-icon" id="downloadTemplateBtn"><i class="fas fa-download"></i> 下载模版</button><button class="btn-icon" id="importExcelBtn"><i class="fas fa-upload"></i> 导入Excel</button><button class="btn-icon" id="exportExcelBtn"><i class="fas fa-file-excel"></i> 导出Excel</button><button class="btn-icon" id="loadJsonBtn"><i class="fas fa-file-import"></i> 加载JSON</button><button class="btn-icon" id="exportJsonBtn"><i class="fas fa-file-code"></i> 导出JSON</button><button class="btn-icon btn-primary" id="startStudyBtn"><i class="fas fa-graduation-cap"></i> 开始学习</button></div></div><div id="cardsListContainer" class="cards-grid"></div>`;
             }
             if (currentGroupId) {
                 if (currentGroupId === REVIEW_GROUP_ID) {
@@ -1632,6 +1668,17 @@
             }
             bindToolbarEvents();
             bindSearchEvents();
+            
+            // 重新绑定切换侧边栏的事件
+            const toggleSidebarBtn = document.getElementById('toggleSidebarBtn');
+            if (toggleSidebarBtn) {
+                toggleSidebarBtn.addEventListener('click', function() {
+                    const appLayout = document.querySelector('.app-layout');
+                    if (appLayout) {
+                        appLayout.classList.toggle('sidebar-hidden');
+                    }
+                });
+            }
         }
 
         // Excel 导入导出
@@ -1785,6 +1832,20 @@
             bindSearchEvents();
             document.getElementById('newSubjectBtn').addEventListener('click', () => openEditSubjectModal(null, ''));
         }
+        
+        // 绑定切换侧边栏的事件
+        document.addEventListener('DOMContentLoaded', function() {
+            const toggleSidebarBtn = document.getElementById('toggleSidebarBtn');
+            if (toggleSidebarBtn) {
+                toggleSidebarBtn.addEventListener('click', function() {
+                    const appLayout = document.querySelector('.app-layout');
+                    if (appLayout) {
+                        appLayout.classList.toggle('sidebar-hidden');
+                    }
+                });
+            }
+        });
+        
         init();
     </script>
 </body>
