@@ -647,38 +647,74 @@
             }
         }
 
-        async function loadData() {
-            const storedSubjects = localStorage.getItem('subjects_data');
-            const storedGroups = localStorage.getItem('groups_data');
-            const storedCards = localStorage.getItem('cards_data');
-            const storedCollapsed = localStorage.getItem('collapsedSubjects');
-            
-            if (storedSubjects && storedGroups && storedCards) {
-                // 已有本地数据，直接使用
-                subjects = JSON.parse(storedSubjects);
-                groups = JSON.parse(storedGroups);
-                cards = JSON.parse(storedCards);
-                if (storedCollapsed) collapsedSubjects = new Set(JSON.parse(storedCollapsed));
-                // 确保旧数据有 subjectId
-                let needSave = false;
-                groups.forEach(g => {
-                    if (g.subjectId === undefined) {
-                        if (subjects.length === 0) {
-                            const defaultSubject = { id: Date.now(), name: "默认科目" };
-                            subjects.push(defaultSubject);
-                        }
-                        g.subjectId = subjects[0].id;
-                        needSave = true;
-                    }
-                });
-                if (needSave) saveData();
-            } else {
-                // 无本地数据，从 JSON 加载
-                await loadInitialDataFromJson();
-                const storedCollapsedAfter = localStorage.getItem('collapsedSubjects');
-                if (storedCollapsedAfter) collapsedSubjects = new Set(JSON.parse(storedCollapsedAfter));
+async function loadData() {
+    // 强制从 data.json 加载知识库内容，忽略 localStorage 中的 subjects/groups/cards
+    try {
+        const response = await fetch('data.json');
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        
+        // 用 JSON 内容覆盖 subjects, groups, cards
+        subjects = data.subjects && Array.isArray(data.subjects) ? data.subjects : [];
+        groups = data.groups && Array.isArray(data.groups) ? data.groups : [];
+        cards = data.cards && Array.isArray(data.cards) ? data.cards : [];
+        
+        // 确保每个 group 都有 subjectId（兼容旧格式）
+        groups.forEach(g => {
+            if (g.subjectId === undefined && subjects.length) {
+                g.subjectId = subjects[0].id;
             }
+        });
+        
+        // 如果 data.json 为空，创建一条示例（避免空白界面）
+        if (subjects.length === 0 && groups.length === 0 && cards.length === 0) {
+            const defaultSubject = { id: Date.now(), name: "示例科目" };
+            subjects.push(defaultSubject);
+            const defaultGroup = { id: Date.now(), name: "示例卡组", subjectId: defaultSubject.id };
+            groups.push(defaultGroup);
+            cards.push({ id: Date.now(), groupId: defaultGroup.id, question: "欢迎使用", answer: "请编辑 data.json 添加您的知识库。" });
         }
+        
+        // 将知识库内容保存到 localStorage（供导出等功能使用，但下次启动仍会被 JSON 覆盖）
+        localStorage.setItem('subjects_data', JSON.stringify(subjects));
+        localStorage.setItem('groups_data', JSON.stringify(groups));
+        localStorage.setItem('cards_data', JSON.stringify(cards));
+        
+        // 恢复折叠状态和记忆状态（这些属于用户进度，不从 JSON 覆盖）
+        const storedCollapsed = localStorage.getItem('collapsedSubjects');
+        if (storedCollapsed) collapsedSubjects = new Set(JSON.parse(storedCollapsed));
+        
+        // 注意：masteredCardsMap 不存储在 JSON 中，所以不受影响，会从 localStorage 保留
+        showToast('已从 data.json 加载知识库');
+    } catch (err) {
+        console.error('加载 data.json 失败:', err);
+        showToast('无法加载 data.json，请确保文件存在且格式正确', true);
+        
+        // 降级：尝试从 localStorage 读取（旧数据）
+        const storedSubjects = localStorage.getItem('subjects_data');
+        const storedGroups = localStorage.getItem('groups_data');
+        const storedCards = localStorage.getItem('cards_data');
+        if (storedSubjects && storedGroups && storedCards) {
+            subjects = JSON.parse(storedSubjects);
+            groups = JSON.parse(storedGroups);
+            cards = JSON.parse(storedCards);
+            showToast('已从本地存储加载（data.json 不可用）');
+        } else {
+            // 最后创建空示例
+            subjects = [];
+            groups = [];
+            cards = [];
+            const defaultSubject = { id: Date.now(), name: "示例科目" };
+            subjects.push(defaultSubject);
+            const defaultGroup = { id: Date.now(), name: "示例卡组", subjectId: defaultSubject.id };
+            groups.push(defaultGroup);
+            cards.push({ id: Date.now(), groupId: defaultGroup.id, question: "欢迎使用", answer: "请放置 data.json 文件到同目录下。" });
+            localStorage.setItem('subjects_data', JSON.stringify(subjects));
+            localStorage.setItem('groups_data', JSON.stringify(groups));
+            localStorage.setItem('cards_data', JSON.stringify(cards));
+        }
+    }
+}
 
         function getCardsByGroup(groupId) { return cards.filter(c => Number(c.groupId) === Number(groupId)); }
         function getGroupNameById(id) { const g = groups.find(g => Number(g.id) === Number(id)); return g ? g.name : ''; }
