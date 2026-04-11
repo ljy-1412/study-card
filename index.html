@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>智学卡组 | 科目·卡组记忆系统</title>
+    <title>WIKI | 科目·卡组记忆系统</title>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/2.1.0/showdown.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
@@ -16,16 +16,21 @@
             box-sizing: border-box;
             font-family: system-ui, 'Segoe UI', 'Roboto', sans-serif;
         }
+
         body {
             background: #eef2f7;
             height: 100vh;
             overflow: hidden;
         }
+
         .app-layout {
             display: flex;
             height: 100vh;
             width: 100%;
+            transition: all 0.2s ease;
         }
+
+        /* 侧边栏基础样式 */
         .groups-sidebar {
             width: 300px;
             background: #ffffff;
@@ -34,22 +39,134 @@
             flex-direction: column;
             box-shadow: 2px 0 12px rgba(0, 0, 0, 0.03);
             overflow-y: auto;
-            transition: width 0.3s ease;
+            flex-shrink: 0;
+            transition: width 0.3s ease, opacity 0.2s ease;
         }
+
+        /* 电脑端折叠 */
+        .app-layout.sidebar-collapsed .groups-sidebar {
+            width: 0;
+            overflow: hidden;
+            opacity: 0;
+            border-right: none;
+        }
+
+        /* 移动端滑出（默认隐藏） */
+        @media (max-width: 768px) {
+            .app-layout {
+                flex-direction: column;
+            }
+            .groups-sidebar {
+                position: fixed;
+                top: 0;
+                left: 0;
+                height: 100vh;
+                z-index: 1000;
+                box-shadow: 2px 0 12px rgba(0, 0, 0, 0.1);
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+                width: 300px;
+            }
+            .app-layout.sidebar-visible .groups-sidebar {
+                transform: translateX(0);
+            }
+            .app-layout.sidebar-visible .main-content {
+                filter: blur(2px);
+            }
+            .main-content {
+                flex: 1;
+                width: 100%;
+                margin-left: 0;
+            }
+            .content-header {
+                padding: 0.8rem 1rem;
+            }
+            .toolbar-buttons {
+                flex-wrap: wrap;
+                gap: 8px;
+                justify-content: center;
+            }
+            .btn-icon {
+                padding: 0.3rem 0.8rem;
+                font-size: 0.8rem;
+            }
+            .cards-grid {
+                grid-template-columns: 1fr;
+                padding: 1rem;
+                gap: 1rem;
+            }
+            .card-item {
+                height: 250px;
+            }
+            .study-card-container {
+                margin: 1rem;
+                padding: 1rem;
+            }
+            .study-footer {
+                padding: 1rem;
+            }
+            .memory-buttons {
+                flex-direction: column;
+            }
+            .btn-memory {
+                padding: 0.8rem;
+                font-size: 0.9rem;
+            }
+            h2 {
+                font-size: 1.2rem;
+            }
+            .subject-title {
+                font-size: 0.9rem;
+            }
+            .group-name {
+                font-size: 0.85rem;
+            }
+            .toggle-sidebar-btn {
+                display: block !important;
+            }
+            .close-sidebar-btn {
+                display: flex !important;
+                width: 40px;
+                height: 40px;
+                border-radius: 50%;
+                border: none;
+                background: #2c7aa0;
+                color: white;
+                cursor: pointer;
+                align-items: center;
+                justify-content: center;
+                font-size: 1.1rem;
+                transition: 0.2s;
+            }
+            .close-sidebar-btn:hover {
+                background: #1f5f7a;
+                transform: scale(1.05);
+            }
+            .app-layout.sidebar-visible .main-content {
+                filter: none;
+                pointer-events: auto;
+            }
+        }
+
+        /* 其余样式（表格、学习模式等） */
         .sidebar-header {
             padding: 1rem 1.2rem 0.5rem 1.2rem;
             border-bottom: 1px solid #eef2f8;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-shrink: 0;
         }
+
         .sidebar-header h2 {
             font-size: 1.3rem;
             background: linear-gradient(135deg, #1e4b6e, #2c7aa0);
             background-clip: text;
             -webkit-background-clip: text;
             color: transparent;
+            margin-left: 8px;
         }
+
         .new-subject-btn {
             background: #2c7aa0;
             color: white;
@@ -62,9 +179,12 @@
             align-items: center;
             gap: 5px;
         }
+
         .search-box {
             padding: 0.8rem 1.2rem;
+            flex-shrink: 0;
         }
+
         .search-box input {
             width: 100%;
             padding: 0.6rem;
@@ -72,16 +192,19 @@
             border: 1px solid #dce5ec;
             font-size: 0.9rem;
         }
+
         .subject-list {
             flex: 1;
             overflow-y: auto;
             padding: 0.5rem 0.8rem;
         }
+
         .subject-container {
             margin-bottom: 1rem;
             border-radius: 0.8rem;
             background: #f8fafd;
         }
+
         .subject-header {
             display: flex;
             justify-content: space-between;
@@ -92,9 +215,11 @@
             cursor: pointer;
             transition: 0.2s;
         }
+
         .subject-header:hover {
             background: #e2ecf3;
         }
+
         .subject-title {
             display: flex;
             align-items: center;
@@ -102,10 +227,12 @@
             font-weight: 600;
             color: #1f4b64;
         }
+
         .subject-actions {
             display: flex;
             gap: 6px;
         }
+
         .subject-actions button {
             background: transparent;
             border: none;
@@ -115,17 +242,21 @@
             padding: 4px;
             border-radius: 30px;
         }
+
         .subject-actions button:hover {
             background: #dce9f2;
             color: #2c5a7a;
         }
+
         .group-list-under-subject {
             padding: 0.5rem 0 0.5rem 1.5rem;
             display: block;
         }
+
         .group-list-under-subject.collapsed {
             display: none;
         }
+
         .group-item {
             background: white;
             border-radius: 0.8rem;
@@ -138,26 +269,32 @@
             align-items: center;
             border: 1px solid #e9f0f5;
         }
+
         .group-item.active {
             background: #e3f0f9;
             border-left: 4px solid #2c7aa0;
         }
+
         .group-info {
             flex: 1;
         }
+
         .group-name {
             font-weight: 600;
             color: #1f4b64;
             font-size: 0.9rem;
         }
+
         .group-count {
             font-size: 0.7rem;
             color: #6c8ea0;
         }
+
         .group-actions {
             display: flex;
             gap: 6px;
         }
+
         .group-actions button {
             background: transparent;
             border: none;
@@ -167,10 +304,12 @@
             padding: 4px;
             border-radius: 30px;
         }
+
         .group-actions button:hover {
             background: #dce9f2;
             color: #2c5a7a;
         }
+
         .add-group-btn {
             margin: 0.5rem 1rem 1rem 1rem;
             background: #2c7aa0;
@@ -186,6 +325,7 @@
             gap: 8px;
             font-size: 0.85rem;
         }
+
         .main-content {
             flex: 1;
             display: flex;
@@ -194,6 +334,7 @@
             background: #f5f9fe;
             position: relative;
         }
+
         .content-header {
             background: white;
             padding: 0.8rem 2rem;
@@ -203,10 +344,12 @@
             align-items: center;
             flex-wrap: wrap;
         }
+
         .toolbar-buttons {
             display: flex;
             gap: 10px;
         }
+
         .btn-icon {
             background: white;
             border: 1px solid #cde0ea;
@@ -219,11 +362,13 @@
             gap: 6px;
             transition: 0.2s;
         }
+
         .btn-primary {
             background: #2c7aa0;
             border-color: #2c7aa0;
             color: white;
         }
+
         .cards-grid {
             flex: 1;
             overflow-y: auto;
@@ -233,6 +378,7 @@
             gap: 1.5rem;
             align-content: flex-start;
         }
+
         .card-item {
             background: white;
             border-radius: 1.2rem;
@@ -244,24 +390,29 @@
             transition: 0.2s;
             cursor: pointer;
         }
+
         .card-item:hover {
             transform: translateY(-3px);
             box-shadow: 0 12px 20px rgba(0, 0, 0, 0.1);
         }
+
         .card-preview {
             flex: 1;
             padding: 1rem;
             overflow-y: auto;
         }
+
         .card-question {
             font-weight: 700;
             color: #1f4b64;
             margin-bottom: 0.5rem;
         }
+
         .card-answer-preview {
             font-size: 0.8rem;
             color: #4b6f88;
         }
+
         .card-actions {
             display: flex;
             justify-content: flex-end;
@@ -270,6 +421,7 @@
             border-top: 1px solid #ecf3f8;
             background: white;
         }
+
         .card-actions button {
             background: transparent;
             border: none;
@@ -279,9 +431,11 @@
             border-radius: 20px;
             transition: 0.1s;
         }
+
         .card-actions button:hover {
             background: #eef2f8;
         }
+
         .study-view {
             position: absolute;
             top: 0;
@@ -296,6 +450,7 @@
             overflow-y: auto;
             pointer-events: auto;
         }
+
         .study-card-container {
             max-width: 900px;
             width: 100%;
@@ -308,6 +463,7 @@
             display: flex;
             flex-direction: column;
         }
+
         .study-card-header {
             background: #f8fafd;
             padding: 1rem 1.8rem;
@@ -319,6 +475,7 @@
             gap: 8px;
             flex-shrink: 0;
         }
+
         .study-body {
             padding: 2rem;
             cursor: pointer;
@@ -327,12 +484,14 @@
             overflow-y: auto;
             word-wrap: break-word;
         }
+
         .study-card-container .study-footer {
             padding: 1.5rem 2rem;
             border-top: 1px solid #e9f0f5;
             background: #f8fafd;
             flex-shrink: 0;
         }
+
         .study-question {
             font-size: 1.5rem;
             font-weight: 600;
@@ -340,19 +499,22 @@
             line-height: 1.4;
             margin-bottom: 1rem;
         }
+
         .study-answer {
             margin-top: 1.5rem;
             padding-top: 1.2rem;
             border-top: 2px dashed #cde3ef;
             display: none;
         }
+
         .study-answer.show {
             display: block;
         }
-        /* 增强表格样式 */
+
         .answer-markdown {
             line-height: 1.6;
         }
+
         .answer-markdown h1,
         .answer-markdown h2,
         .answer-markdown h3,
@@ -360,23 +522,28 @@
             margin: 1rem 0 0.5rem;
             color: #1f4b64;
         }
+
         .answer-markdown p {
             margin-bottom: 1rem;
         }
+
         .answer-markdown ul,
         .answer-markdown ol {
             margin: 1rem 0;
             padding-left: 2rem;
         }
+
         .answer-markdown li {
             margin-bottom: 0.5rem;
         }
+
         .answer-markdown code {
             background: #f0f4f8;
             padding: 0.2rem 0.4rem;
             border-radius: 0.3rem;
             font-family: 'Courier New', monospace;
         }
+
         .answer-markdown pre {
             background: #f0f4f8;
             padding: 1rem;
@@ -384,24 +551,28 @@
             overflow-x: auto;
             margin: 1rem 0;
         }
+
         .answer-markdown pre code {
             background: transparent;
             padding: 0;
         }
+
         .answer-markdown blockquote {
             border-left: 4px solid #2c7aa0;
             padding-left: 1rem;
             margin: 1rem 0;
             color: #4b6f88;
         }
+
         .answer-markdown a {
             color: #2c7aa0;
             text-decoration: none;
         }
+
         .answer-markdown a:hover {
             text-decoration: underline;
         }
-        /* 表格样式 */
+
         .answer-markdown table {
             width: 100%;
             border-collapse: collapse;
@@ -410,26 +581,31 @@
             overflow-x: auto;
             display: block;
         }
+
         .answer-markdown th,
         .answer-markdown td {
             padding: 0.6rem;
             border: 1px solid #cbdde6;
             text-align: left;
         }
+
         .answer-markdown th {
             background: #eef3f8;
             font-weight: 600;
             color: #1f4b64;
         }
+
         .answer-markdown tr:nth-child(even) {
             background: #f8fafd;
         }
+
         .memory-buttons {
             display: flex;
             gap: 15px;
             margin-top: 1rem;
             justify-content: center;
         }
+
         .btn-memory {
             padding: 0.6rem 1.2rem;
             border-radius: 3rem;
@@ -437,20 +613,92 @@
             font-weight: 500;
             cursor: pointer;
         }
+
         .btn-remember {
             background: #2c7a4d;
             color: white;
         }
+
         .btn-forget {
             background: #b85c3a;
             color: white;
         }
+
         .empty-placeholder {
             text-align: center;
             padding: 3rem;
             color: #6c8ea0;
-            white-space: nowrap;
         }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            pointer-events: auto;
+        }
+
+        .modal-content {
+            background: white;
+            width: 90%;
+            max-width: 550px;
+            border-radius: 1.5rem;
+            padding: 1.8rem;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        input,
+        textarea,
+        select {
+            width: 100%;
+            padding: 0.7rem;
+            border-radius: 1rem;
+            border: 1px solid #cbdde6;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 25px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1e2f3c;
+            color: white;
+            padding: 0.6rem 1.5rem;
+            border-radius: 40px;
+            opacity: 0;
+            transition: 0.2s;
+            z-index: 2000;
+            pointer-events: none;
+        }
+
+        .back-link {
+            margin-bottom: 1rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: white;
+            padding: 0.4rem 1rem;
+            border-radius: 2rem;
+            cursor: pointer;
+            width: fit-content;
+        }
+
+        .fa-chevron-right,
+        .fa-chevron-down {
+            font-size: 0.8rem;
+            transition: 0.1s;
+        }
+
         .toggle-sidebar-btn {
             background: #2c7aa0;
             color: white;
@@ -466,101 +714,93 @@
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             transition: all 0.2s ease;
         }
-        
+
         .toggle-sidebar-btn:hover {
             background: #1f5f7a;
             transform: scale(1.05);
         }
-        
-        /* 侧边栏隐藏状态 */
-        .app-layout.sidebar-hidden .groups-sidebar {
-            width: 0;
-            overflow: hidden;
-            border-right: none;
-            transition: width 0.3s ease;
+
+        /* 复习卡组固定底部 */
+        .review-fixed-area {
+            flex-shrink: 0;
+            border-top: 1px solid #eef2f8;
+            padding: 0.8rem;
+            background: #ffffff;
         }
-        
-        .app-layout.sidebar-hidden .main-content {
-            margin-left: 0;
-            width: 100%;
-        }
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(4px);
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-            pointer-events: auto;
-        }
-        .modal-content {
-            background: white;
-            width: 90%;
-            max-width: 550px;
-            border-radius: 1.5rem;
-            padding: 1.8rem;
-        }
-        .form-group {
-            margin-bottom: 1rem;
-        }
-        input,
-        textarea,
-        select {
-            width: 100%;
-            padding: 0.7rem;
-            border-radius: 1rem;
-            border: 1px solid #cbdde6;
-        }
-        .toast {
-            position: fixed;
-            bottom: 25px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #1e2f3c;
-            color: white;
-            padding: 0.6rem 1.5rem;
-            border-radius: 40px;
-            opacity: 0;
-            transition: 0.2s;
-            z-index: 2000;
-            pointer-events: none;
-        }
-        .back-link {
-            margin-bottom: 1rem;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            background: white;
-            padding: 0.4rem 1rem;
-            border-radius: 2rem;
+
+        .review-group-item {
+            background: #f8fafd;
+            border-radius: 0.8rem;
+            padding: 0.6rem 0.8rem;
             cursor: pointer;
-            width: fit-content;
+            transition: all 0.2s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid #e9f0f5;
+            margin-bottom: 0;
         }
-        .fa-chevron-right,
-        .fa-chevron-down {
-            font-size: 0.8rem;
-            transition: 0.1s;
+
+        .review-group-item.active {
+            background: #e3f0f9;
+            border-left: 4px solid #2c7aa0;
+        }
+
+        .review-group-info {
+            flex: 1;
+        }
+
+        .review-group-name {
+            font-weight: 600;
+            color: #1f4b64;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .review-group-count {
+            font-size: 0.7rem;
+            color: #6c8ea0;
+        }
+
+        .review-group-actions {
+            display: flex;
+            gap: 6px;
+        }
+
+        .review-group-actions button {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            color: #7f9ab0;
+            font-size: 0.7rem;
+            padding: 4px;
+            border-radius: 30px;
+        }
+
+        .review-group-actions button:hover {
+            background: #dce9f2;
+            color: #2c5a7a;
         }
     </style>
 </head>
 
 <body>
-    <div class="app-layout">
+    <div class="app-layout" id="appLayout">
         <div class="groups-sidebar">
             <div class="sidebar-header">
                 <h2><i class="fas fa-layer-group"></i> 我的知识库</h2>
-                <button class="new-subject-btn" id="newSubjectBtn"><i class="fas fa-plus"></i> 科目</button>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <button class="new-subject-btn" id="newSubjectBtn"><i class="fas fa-plus"></i> 科目</button>
+                    <button class="close-sidebar-btn" id="closeSidebarBtn" style="display: none;"><i class="fas fa-times"></i></button>
+                </div>
             </div>
             <div class="search-box">
                 <input type="text" id="groupSearchInput" placeholder="搜索卡组..." />
             </div>
             <div class="subject-list" id="subjectListContainer"></div>
-            <button class="add-group-btn" id="sidebarAddGroupBtn" style="display: none;"><i class="fas fa-plus"></i> 新建卡组</button>
+            <div class="review-fixed-area" id="reviewFixedArea"></div>
         </div>
         <div class="main-content" id="mainContent">
             <div class="content-header" id="contentHeader">
@@ -589,14 +829,15 @@
         </div>
     </div>
     <div id="toastMsg" class="toast"></div>
+
     <script>
         // ---------- 数据结构 ----------
-        let subjects = [];      // { id, name }
-        let groups = [];        // { id, name, subjectId }
+        let subjects = [];
+        let groups = [];
         let cards = [];
-        let reviewCards = [];   // 复习卡组卡片 { id, originalCardId, originalGroupId, question, answer }
+        let reviewCards = [];
         let currentGroupId = null;
-        let masteredCardsMap = new Map(); // groupId -> Set(cardIds)
+        let masteredCardsMap = new Map();
         let studyModeActive = false;
         let currentStudyGroupId = null;
         let currentStudyCard = null;
@@ -604,8 +845,7 @@
         let groupSearchKeyword = '';
         let cardSearchKeyword = '';
         let collapsedSubjects = new Set();
-        const REVIEW_GROUP_ID = 'review'; // 复习卡组的固定ID
-
+        const REVIEW_GROUP_ID = 'review';
         let showdownConverter = null;
 
         // ---------- 辅助函数 ----------
@@ -652,16 +892,14 @@
                         if (data.groups && Array.isArray(data.groups)) groups = data.groups;
                         if (data.cards && Array.isArray(data.cards)) cards = data.cards;
                         if (data.reviewCards && Array.isArray(data.reviewCards)) reviewCards = data.reviewCards;
-                        // 确保每个 group 都有 subjectId（兼容旧格式）
                         groups.forEach(g => {
                             if (g.subjectId === undefined && subjects.length) {
                                 g.subjectId = subjects[0].id;
                             }
                         });
-                        // 保存到 localStorage
                         saveData();
-                        // 重新渲染界面
                         renderGroupsSidebar();
+                        renderReviewFixed();
                         if (currentGroupId) renderCardsOfGroup();
                         showToast('成功加载 JSON 文件');
                     } catch (err) {
@@ -685,25 +923,19 @@
             });
         }
 
-        // 增强的 Markdown 渲染，确保表格正确显示
         function renderMarkdown(md) {
             if (!md) return '';
             try {
-                // 预处理：确保表格前后有空行（如果内容看起来像表格但缺少换行）
                 let processed = md;
-                // 检测是否包含表格行（以 | 开头或包含 | 的连续行），并在前后添加换行
                 if (processed.includes('|') && (processed.includes('\n|') || processed.includes('|\n'))) {
-                    // 如果表格前不是空行，添加一个换行
                     if (!processed.match(/(\n\n|\r\n\r\n)\s*\|/)) {
                         processed = '\n' + processed;
                     }
-                    // 如果表格后不是空行，添加一个换行
                     if (!processed.match(/\|\s*(\n\n|\r\n\r\n)/)) {
                         processed = processed + '\n';
                     }
                 }
                 let raw = showdownConverter.makeHtml(processed);
-                // 使用 DOMPurify 清洗，允许表格相关标签和属性
                 const clean = DOMPurify.sanitize(raw, {
                     ALLOWED_TAGS: ['p', 'br', 'strong', 'b', 'em', 'i', 'ul', 'ol', 'li', 'code', 'pre', 'h1', 'h2', 'h3', 'h4', 'blockquote', 'a', 'hr', 'div', 'span', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'img', 'caption'],
                     ALLOWED_ATTR: ['href', 'target', 'src', 'alt', 'colspan', 'rowspan', 'align', 'class']
@@ -723,7 +955,6 @@
             localStorage.setItem('collapsedSubjects', JSON.stringify([...collapsedSubjects]));
         }
 
-        // 强制从 data.json 加载（用于 HTTP 环境）
         async function loadDataFromJsonFile() {
             try {
                 const response = await fetch('data.json');
@@ -748,10 +979,8 @@
         }
 
         async function loadData() {
-            // 优先尝试从同目录的 data.json 自动加载（仅当通过 HTTP 访问时有效）
             const loaded = await loadDataFromJsonFile();
             if (!loaded) {
-                // 如果自动加载失败，尝试从 localStorage 读取已有数据
                 const storedSubjects = localStorage.getItem('subjects_data');
                 const storedGroups = localStorage.getItem('groups_data');
                 const storedCards = localStorage.getItem('cards_data');
@@ -763,7 +992,6 @@
                     cards = JSON.parse(storedCards);
                     if (storedReviewCards) reviewCards = JSON.parse(storedReviewCards);
                     if (storedCollapsed) collapsedSubjects = new Set(JSON.parse(storedCollapsed));
-                    // 确保旧数据有 subjectId
                     let needSave = false;
                     groups.forEach(g => {
                         if (g.subjectId === undefined && subjects.length) {
@@ -774,7 +1002,6 @@
                     if (needSave) saveData();
                     showToast('已从本地存储加载');
                 } else {
-                    // 没有任何数据，创建示例
                     subjects = [];
                     groups = [];
                     cards = [];
@@ -787,55 +1014,39 @@
                     showToast('未找到数据，已创建示例');
                 }
             }
-            // 恢复折叠状态（如果之前有）
             const storedCollapsed = localStorage.getItem('collapsedSubjects');
             if (storedCollapsed) collapsedSubjects = new Set(JSON.parse(storedCollapsed));
         }
 
         function getCardsByGroup(groupId) {
-            if (groupId === REVIEW_GROUP_ID) {
-                return reviewCards;
-            }
+            if (groupId === REVIEW_GROUP_ID) return reviewCards;
             return cards.filter(c => Number(c.groupId) === Number(groupId));
         }
         function getGroupNameById(id) { const g = groups.find(g => Number(g.id) === Number(id)); return g ? g.name : ''; }
         function getSubjectNameById(id) { const s = subjects.find(s => Number(s.id) === Number(id)); return s ? s.name : ''; }
 
-        // 渲染左侧：科目+卡组
+        // 渲染左侧科目和卡组
         function renderGroupsSidebar() {
             const container = document.getElementById('subjectListContainer');
             if (!container) return;
-
-            const filteredGroups = groups.filter(group => {
-                if (!groupSearchKeyword) return true;
-                return group.name.toLowerCase().includes(groupSearchKeyword.toLowerCase());
-            });
-
+            const filteredGroups = groups.filter(group => !groupSearchKeyword || group.name.toLowerCase().includes(groupSearchKeyword.toLowerCase()));
             const groupsBySubject = new Map();
-            subjects.forEach(subj => { groupsBySubject.set(subj.id, []); });
+            subjects.forEach(subj => groupsBySubject.set(subj.id, []));
             filteredGroups.forEach(group => {
                 const subjId = group.subjectId;
-                if (groupsBySubject.has(subjId)) {
-                    groupsBySubject.get(subjId).push(group);
-                } else {
-                    if (!groupsBySubject.has(subjId)) groupsBySubject.set(subjId, []);
-                    groupsBySubject.get(subjId).push(group);
-                }
+                if (groupsBySubject.has(subjId)) groupsBySubject.get(subjId).push(group);
+                else groupsBySubject.set(subjId, [group]);
             });
-
             if (subjects.length === 0 && filteredGroups.length === 0) {
                 container.innerHTML = '<div style="padding:1rem; text-align:center;">暂无科目，点击右上角「+ 科目」创建</div>';
-                document.getElementById('sidebarAddGroupBtn').style.display = 'none';
                 return;
             }
-
-            // 先渲染所有普通科目和卡组
-            let subjectsHtml = '';
+            let html = '';
             for (let subj of subjects) {
                 const subjGroups = groupsBySubject.get(subj.id) || [];
                 const isCollapsed = collapsedSubjects.has(subj.id);
                 const chevronClass = isCollapsed ? 'fa-chevron-right' : 'fa-chevron-down';
-                subjectsHtml += `
+                html += `
                     <div class="subject-container" data-subject-id="${subj.id}">
                         <div class="subject-header" data-subject-id="${subj.id}">
                             <div class="subject-title">
@@ -852,12 +1063,12 @@
                         <div class="group-list-under-subject ${isCollapsed ? 'collapsed' : ''}" data-subject-id="${subj.id}">
                 `;
                 if (subjGroups.length === 0) {
-                    subjectsHtml += `<div style="padding:0.5rem; color:#aaa; font-size:0.8rem; text-align:center;">暂无卡组</div>`;
+                    html += `<div style="padding:0.5rem; color:#aaa; font-size:0.8rem; text-align:center;">暂无卡组</div>`;
                 } else {
                     subjGroups.forEach(group => {
                         const count = getCardsByGroup(group.id).length;
                         const activeClass = (Number(currentGroupId) === Number(group.id)) ? 'active' : '';
-                        subjectsHtml += `
+                        html += `
                             <div class="group-item ${activeClass}" data-id="${group.id}">
                                 <div class="group-info">
                                     <div class="group-name">📁 ${escapeHtml(group.name)}</div>
@@ -871,165 +1082,55 @@
                         `;
                     });
                 }
-                subjectsHtml += `</div></div>`;
+                html += `</div></div>`;
             }
-            
-            // 显示复习卡组（固定在最下面）
-            const reviewCount = reviewCards.length;
-            const reviewActiveClass = (currentGroupId === REVIEW_GROUP_ID) ? 'active' : '';
-            const reviewHtml = `
-                <div class="subject-header ${reviewActiveClass}" style="background: #e3f0f9; cursor: pointer;" data-id="${REVIEW_GROUP_ID}">
-                    <div class="subject-title">
-                        <i class="fas fa-star"></i>
-                        <span>⭐ 复习卡组</span>
-                        <span style="font-size:0.7rem; color:#6c8ea0;">(${reviewCount}张卡片)</span>
-                    </div>
-                    <div class="subject-actions">
-                        <button class="clear-review-group" title="清空复习卡组"><i class="fas fa-trash"></i></button>
-                    </div>
-                </div>
-            `;
-            
-            // 组合HTML，将复习卡组固定在最底部
-            container.innerHTML = `
-                <div style="flex: 1; overflow-y: auto; padding-bottom: 80px;">
-                    ${subjectsHtml}
-                </div>
-                <div style="position: fixed; bottom: 0; left: 0; width: 300px; background: #ffffff; border-top: 1px solid #eef2f8; padding: 1rem; box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.03); z-index: 100; box-sizing: border-box;">
-                    ${reviewHtml}
-                </div>
-            `;
+            container.innerHTML = html;
 
-            // 折叠/展开和复习卡组点击
+            // 绑定事件
             document.querySelectorAll('.subject-header').forEach(header => {
                 header.addEventListener('click', (e) => {
                     if (e.target.closest('.subject-actions')) return;
-                    // 检查是否是复习卡组
-                    const reviewGroupId = header.dataset.id;
-                    if (reviewGroupId === REVIEW_GROUP_ID) {
-                        // 点击复习卡组标题栏，选择复习卡组
-                        selectGroup(reviewGroupId);
-                    } else {
-                        // 普通科目，折叠/展开
-                        const subjId = Number(header.dataset.subjectId);
-                        const groupListDiv = header.parentElement.querySelector('.group-list-under-subject');
-                        if (groupListDiv) {
-                            if (collapsedSubjects.has(subjId)) {
-                                collapsedSubjects.delete(subjId);
-                                groupListDiv.classList.remove('collapsed');
-                                header.querySelector('.subject-toggle-icon').classList.replace('fa-chevron-right', 'fa-chevron-down');
-                            } else {
-                                collapsedSubjects.add(subjId);
-                                groupListDiv.classList.add('collapsed');
-                                header.querySelector('.subject-toggle-icon').classList.replace('fa-chevron-down', 'fa-chevron-right');
-                            }
-                            saveData();
+                    const subjId = Number(header.dataset.subjectId);
+                    const groupListDiv = header.parentElement.querySelector('.group-list-under-subject');
+                    if (groupListDiv) {
+                        if (collapsedSubjects.has(subjId)) {
+                            collapsedSubjects.delete(subjId);
+                            groupListDiv.classList.remove('collapsed');
+                            header.querySelector('.subject-toggle-icon').classList.replace('fa-chevron-right', 'fa-chevron-down');
+                        } else {
+                            collapsedSubjects.add(subjId);
+                            groupListDiv.classList.add('collapsed');
+                            header.querySelector('.subject-toggle-icon').classList.replace('fa-chevron-down', 'fa-chevron-right');
                         }
+                        saveData();
                     }
                 });
             });
-
-            // 科目内新建卡组
             document.querySelectorAll('.add-group-to-subject').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    const subjectId = Number(btn.dataset.subjectId);
-                    openEditGroupModal(null, '', subjectId);
+                    openEditGroupModal(null, '', Number(btn.dataset.subjectId));
                 });
             });
-
-            // 编辑科目
             document.querySelectorAll('.edit-subject').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    const id = Number(btn.dataset.subjectId);
-                    const name = btn.dataset.name;
-                    openEditSubjectModal(id, name);
+                    openEditSubjectModal(Number(btn.dataset.subjectId), btn.dataset.name);
                 });
             });
-
-            // 删除科目
             document.querySelectorAll('.delete-subject').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    const id = Number(btn.dataset.subjectId);
-                    deleteSubjectById(id);
+                    deleteSubjectById(Number(btn.dataset.subjectId));
                 });
             });
-
-            // 卡组点击
             document.querySelectorAll('.group-item').forEach(el => {
                 const id = el.dataset.id;
                 el.addEventListener('click', (e) => {
                     if (e.target.closest('.group-actions')) return;
-                    // 选择卡组
                     selectGroup(id);
                 });
             });
-            
-            // 为卡组添加拖放事件
-            document.querySelectorAll('.group-item').forEach(el => {
-                const id = el.dataset.id;
-                // 添加拖放事件
-                el.addEventListener('dragover', (e) => {
-                    e.preventDefault();
-                    if (id === REVIEW_GROUP_ID) {
-                        el.style.backgroundColor = '#e3f0f9';
-                    }
-                });
-                
-                el.addEventListener('dragleave', (e) => {
-                    e.preventDefault();
-                    el.style.backgroundColor = '';
-                });
-                
-                el.addEventListener('drop', (e) => {
-                    e.preventDefault();
-                    el.style.backgroundColor = '';
-                    if (id === REVIEW_GROUP_ID) {
-                        const cardId = Number(e.dataTransfer.getData('text/plain'));
-                        const card = cards.find(c => c.id === cardId);
-                        if (card) {
-                            // 检查是否已经在复习卡组中
-                            if (!reviewCards.some(c => c.originalCardId === cardId)) {
-                                const reviewCard = {
-                                    id: Date.now(),
-                                    originalCardId: cardId,
-                                    originalGroupId: card.groupId,
-                                    question: card.question,
-                                    answer: card.answer
-                                };
-                                reviewCards.push(reviewCard);
-                                saveData();
-                                renderGroupsSidebar();
-                                showToast('卡片已添加到复习卡组');
-                            } else {
-                                showToast('卡片已在复习卡组中', true);
-                            }
-                        }
-                    }
-                });
-            });
-            
-            // 绑定复习卡组的清空按钮事件
-            document.querySelectorAll('.clear-review-group').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    if (confirm('确定要清空复习卡组吗？')) {
-                        reviewCards = [];
-                        saveData();
-                        renderGroupsSidebar();
-                        // 如果当前在某个卡组页面，更新星星图标
-                        if (currentGroupId) {
-                            renderCardsOfGroup();
-                        }
-                        showToast('复习卡组已清空');
-                    }
-                });
-            });
-            
-
-            
             document.querySelectorAll('.edit-group').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     e.stopPropagation();
@@ -1039,16 +1140,90 @@
                     openEditGroupModal(id, name, subjectId);
                 });
             });
-            
             document.querySelectorAll('.delete-group').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    const id = Number(btn.dataset.id);
-                    deleteGroupById(id);
+                    deleteGroupById(Number(btn.dataset.id));
                 });
             });
+            // 拖拽添加卡片到复习卡组（通过拖拽到复习卡组区域）
+            setupDragDropForReview();
+        }
 
-            document.getElementById('sidebarAddGroupBtn').style.display = 'none';
+        function renderReviewFixed() {
+            const container = document.getElementById('reviewFixedArea');
+            if (!container) return;
+            const count = reviewCards.length;
+            const activeClass = (currentGroupId === REVIEW_GROUP_ID) ? 'active' : '';
+            const html = `
+                <div class="review-group-item ${activeClass}" data-id="${REVIEW_GROUP_ID}">
+                    <div class="review-group-info">
+                        <div class="review-group-name">
+                            <i class="fas fa-star"></i> 复习卡组
+                            <span class="review-group-count">(${count}张卡片)</span>
+                        </div>
+                    </div>
+                    <div class="review-group-actions">
+                        <button class="clear-review-group" title="清空复习卡组"><i class="fas fa-trash-alt"></i></button>
+                    </div>
+                </div>
+            `;
+            container.innerHTML = html;
+            const reviewItem = container.querySelector('.review-group-item');
+            if (reviewItem) {
+                reviewItem.addEventListener('click', (e) => {
+                    if (e.target.closest('.review-group-actions')) return;
+                    selectGroup(REVIEW_GROUP_ID);
+                });
+            }
+            const clearBtn = container.querySelector('.clear-review-group');
+            if (clearBtn) {
+                clearBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (confirm('确定要清空复习卡组吗？')) {
+                        reviewCards = [];
+                        saveData();
+                        renderReviewFixed();
+                        if (currentGroupId === REVIEW_GROUP_ID) renderCardsOfGroup();
+                        showToast('复习卡组已清空');
+                    }
+                });
+            }
+        }
+
+        function setupDragDropForReview() {
+            const reviewArea = document.getElementById('reviewFixedArea');
+            if (!reviewArea) return;
+            reviewArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                reviewArea.style.backgroundColor = '#e3f0f9';
+            });
+            reviewArea.addEventListener('dragleave', () => {
+                reviewArea.style.backgroundColor = '';
+            });
+            reviewArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                reviewArea.style.backgroundColor = '';
+                const cardId = Number(e.dataTransfer.getData('text/plain'));
+                const card = cards.find(c => c.id === cardId);
+                if (card) {
+                    if (!reviewCards.some(c => c.originalCardId === cardId)) {
+                        const reviewCard = {
+                            id: Date.now(),
+                            originalCardId: cardId,
+                            originalGroupId: card.groupId,
+                            question: card.question,
+                            answer: card.answer
+                        };
+                        reviewCards.push(reviewCard);
+                        saveData();
+                        renderReviewFixed();
+                        showToast('卡片已添加到复习卡组');
+                    } else {
+                        showToast('卡片已在复习卡组中', true);
+                    }
+                }
+            });
         }
 
         // 科目操作
@@ -1078,9 +1253,7 @@
         function deleteSubjectById(subjectId) {
             const targetId = Number(subjectId);
             const groupsInSubject = groups.filter(g => Number(g.subjectId) === targetId);
-            if (groupsInSubject.length > 0 && !confirm(`科目下还有 ${groupsInSubject.length} 个卡组，删除科目会同时删除这些卡组及其所有卡片，确定吗？`)) {
-                return;
-            }
+            if (groupsInSubject.length > 0 && !confirm(`科目下还有 ${groupsInSubject.length} 个卡组，删除科目会同时删除这些卡组及其所有卡片，确定吗？`)) return;
             groupsInSubject.forEach(group => {
                 cards = cards.filter(c => Number(c.groupId) !== Number(group.id));
                 masteredCardsMap.delete(Number(group.id));
@@ -1103,6 +1276,7 @@
             if (studyModeActive) exitStudyMode();
             currentGroupId = groupId;
             renderGroupsSidebar();
+            renderReviewFixed();
             renderCardsOfGroup();
             if (groupId === REVIEW_GROUP_ID) {
                 document.getElementById('currentGroupTitle').innerHTML = '<i class="fas fa-star"></i> 复习卡组';
@@ -1118,35 +1292,20 @@
             document.getElementById('groupToolbar').style.display = 'flex';
         }
 
-        // 渲染卡片列表
         function renderCardsOfGroup() {
             const container = document.getElementById('cardsListContainer');
             if (!currentGroupId) {
                 container.innerHTML = '<div class="empty-placeholder">👈 请从左侧选择一个卡组</div>';
                 return;
             }
-            
-            let groupCards = [];
-            if (currentGroupId === REVIEW_GROUP_ID) {
-                // 显示复习卡组的卡片
-                groupCards = reviewCards;
-            } else {
-                // 显示普通卡组的卡片
-                groupCards = getCardsByGroup(currentGroupId);
-            }
-            
+            let groupCards = getCardsByGroup(currentGroupId);
             if (cardSearchKeyword) {
-                groupCards = groupCards.filter(card => {
-                    const keyword = cardSearchKeyword.toLowerCase();
-                    return card.question.toLowerCase().includes(keyword) || card.answer.toLowerCase().includes(keyword);
-                });
+                groupCards = groupCards.filter(card => card.question.toLowerCase().includes(cardSearchKeyword.toLowerCase()) || card.answer.toLowerCase().includes(cardSearchKeyword.toLowerCase()));
             }
-            
             if (!groupCards.length) {
                 container.innerHTML = '<div class="empty-placeholder">' + (cardSearchKeyword ? '未找到匹配的卡片' : '📭 该卡组暂无卡片，点击「新增卡片」添加') + '</div>';
                 return;
             }
-            
             let html = '';
             groupCards.forEach(card => {
                 const shortAns = card.answer.length > 70 ? card.answer.substring(0, 70) + '…' : card.answer;
@@ -1167,11 +1326,9 @@
                 </div>
             `;
             });
-            
             container.innerHTML = html;
-            
+
             if (currentGroupId === REVIEW_GROUP_ID) {
-                // 绑定复习卡组卡片的移除事件
                 document.querySelectorAll('.remove-review-card-btn').forEach(btn => {
                     btn.addEventListener('click', (e) => {
                         e.stopPropagation();
@@ -1180,45 +1337,35 @@
                             reviewCards = reviewCards.filter(c => c.id !== cardId);
                             saveData();
                             renderCardsOfGroup();
-                            renderGroupsSidebar();
-                            // 如果当前不在复习卡组页面，也需要更新原卡组的星星图标
-                            if (currentGroupId !== REVIEW_GROUP_ID) {
-                                renderCardsOfGroup();
-                            }
+                            renderReviewFixed();
                             showToast('卡片已从复习卡组移除');
                         }
                     });
                 });
             } else {
-                // 绑定普通卡组卡片的编辑和删除事件
                 document.querySelectorAll('.edit-card-btn').forEach(btn => {
                     btn.addEventListener('click', (e) => { e.stopPropagation(); openCardEditModal(Number(btn.dataset.id), btn.dataset.question, btn.dataset.answer); });
                 });
-
                 document.querySelectorAll('.delete-card-btn').forEach(btn => {
                     btn.addEventListener('click', (e) => {
                         e.stopPropagation();
                         const cardId = Number(btn.dataset.id);
                         if (confirm('确定要删除这张卡片吗？')) {
                             cards = cards.filter(c => c.id !== cardId);
-                            // 同时从复习卡组中移除
                             reviewCards = reviewCards.filter(c => c.originalCardId !== cardId);
                             saveData();
                             renderCardsOfGroup();
-                            renderGroupsSidebar();
+                            renderReviewFixed();
                             showToast('卡片已删除');
                         }
                     });
                 });
-
-                // 绑定添加到复习卡组的事件
                 document.querySelectorAll('.add-to-review-btn').forEach(btn => {
                     btn.addEventListener('click', (e) => {
                         e.stopPropagation();
                         const cardId = Number(btn.dataset.id);
                         const card = cards.find(c => c.id === cardId);
                         if (card) {
-                            // 检查是否已经在复习卡组中
                             if (!reviewCards.some(c => c.originalCardId === cardId)) {
                                 const reviewCard = {
                                     id: Date.now(),
@@ -1229,8 +1376,8 @@
                                 };
                                 reviewCards.push(reviewCard);
                                 saveData();
-                                renderGroupsSidebar();
-                                renderCardsOfGroup(); // 重新渲染卡片列表，更新星星图标
+                                renderReviewFixed();
+                                renderCardsOfGroup(); // 刷新星星图标
                                 showToast('卡片已添加到复习卡组');
                             } else {
                                 showToast('卡片已在复习卡组中', true);
@@ -1239,35 +1386,26 @@
                     });
                 });
             }
-            
-            // 绑定卡片点击事件（学习）
+            // 卡片点击学习
             document.querySelectorAll('.card-item').forEach(cardEl => {
                 const cardId = Number(cardEl.dataset.cardId);
                 cardEl.addEventListener('click', (e) => {
                     if (!e.target.closest('.card-actions')) {
                         let targetCard;
-                        if (currentGroupId === REVIEW_GROUP_ID) {
-                            targetCard = reviewCards.find(c => c.id === cardId);
-                        } else {
-                            targetCard = cards.find(c => c.id === cardId);
-                        }
-                        if (targetCard) {
-                            startStudyModeWithCard(targetCard);
-                        }
+                        if (currentGroupId === REVIEW_GROUP_ID) targetCard = reviewCards.find(c => c.id === cardId);
+                        else targetCard = cards.find(c => c.id === cardId);
+                        if (targetCard) startStudyModeWithCard(targetCard);
                     }
                 });
             });
-            
-
-            
-            // 绑定拖拽事件
+            // 拖拽事件
             if (currentGroupId !== REVIEW_GROUP_ID) {
                 document.querySelectorAll('.card-item').forEach(cardItem => {
+                    cardItem.setAttribute('draggable', 'true');
                     cardItem.addEventListener('dragstart', (e) => {
                         e.dataTransfer.setData('text/plain', cardItem.dataset.cardId);
                         cardItem.style.opacity = '0.5';
                     });
-
                     cardItem.addEventListener('dragend', (e) => {
                         cardItem.style.opacity = '1';
                     });
@@ -1284,7 +1422,6 @@
             renderGroupsSidebar();
             showToast("卡组已创建");
         }
-
         function updateGroup(groupId, newName, newSubjectId) {
             const idx = groups.findIndex(g => Number(g.id) === Number(groupId));
             if (idx !== -1) {
@@ -1299,13 +1436,13 @@
                 showToast("卡组已更新");
             }
         }
-
         function deleteGroupById(groupId) {
             if (!confirm("删除卡组将同时删除该组所有卡片，确定吗？")) return;
             const targetId = Number(groupId);
             groups = groups.filter(g => Number(g.id) !== targetId);
             cards = cards.filter(c => Number(c.groupId) !== targetId);
             masteredCardsMap.delete(targetId);
+            reviewCards = reviewCards.filter(c => !cards.some(card => card.id === c.originalCardId));
             saveData();
             if (Number(currentGroupId) === targetId) {
                 currentGroupId = null;
@@ -1315,9 +1452,9 @@
             }
             if (studyModeActive && Number(currentStudyGroupId) === targetId) exitStudyMode();
             renderGroupsSidebar();
+            renderReviewFixed();
             showToast("卡组已删除");
         }
-
         function openEditGroupModal(id, oldName, subjectId) {
             const modalDiv = document.createElement('div'); modalDiv.className = 'modal';
             let subjectOptions = '';
@@ -1332,11 +1469,8 @@
                 const newName = document.getElementById('groupName').value.trim();
                 const newSubjectId = document.getElementById('groupSubject').value;
                 if (!newName) { showToast("名称不能为空", true); return; }
-                if (id) {
-                    updateGroup(id, newName, newSubjectId);
-                } else {
-                    addGroup(newName, newSubjectId);
-                }
+                if (id) updateGroup(id, newName, newSubjectId);
+                else addGroup(newName, newSubjectId);
                 close();
             };
         }
@@ -1351,7 +1485,6 @@
             renderGroupsSidebar();
             showToast("卡片已添加");
         }
-
         function updateCard(cardId, question, answer) {
             const idx = cards.findIndex(c => Number(c.id) === Number(cardId));
             if (idx !== -1) {
@@ -1367,7 +1500,6 @@
                 showToast("卡片已更新");
             }
         }
-
         function deleteCardById(cardId) {
             if (!confirm("删除这张卡片？")) return;
             const card = cards.find(c => Number(c.id) === Number(cardId));
@@ -1383,19 +1515,16 @@
             }
         }
 
-        // 学习模式函数
+        // 学习模式
         function getMasteredSet(groupId) { const targetId = Number(groupId); if (!masteredCardsMap.has(targetId)) masteredCardsMap.set(targetId, new Set()); return masteredCardsMap.get(targetId); }
         function getUnmasteredCards(groupId) { const allCards = getCardsByGroup(groupId); const mastered = getMasteredSet(groupId); return allCards.filter(c => !mastered.has(Number(c.id))); }
         function getRandomUnmasteredCard(groupId) { const unmastered = getUnmasteredCards(groupId); if (unmastered.length === 0) return null; return unmastered[Math.floor(Math.random() * unmastered.length)]; }
-        
+
         function startStudyModeWithCard(initialCard) {
             if (!initialCard) return;
             let groupId;
-            if (initialCard.originalGroupId) {
-                // 复习卡组的卡片
-                groupId = REVIEW_GROUP_ID;
-            } else {
-                // 普通卡组的卡片
+            if (initialCard.originalGroupId !== undefined) groupId = REVIEW_GROUP_ID;
+            else {
                 const group = groups.find(g => Number(g.id) === Number(initialCard.groupId));
                 if (!group) return;
                 groupId = group.id;
@@ -1424,9 +1553,8 @@
         function renderStudyModeView() {
             const mainDiv = document.getElementById('mainContent');
             let groupName = '';
-            if (currentStudyGroupId === REVIEW_GROUP_ID) {
-                groupName = '复习卡组';
-            } else {
+            if (currentStudyGroupId === REVIEW_GROUP_ID) groupName = '复习卡组';
+            else {
                 const group = groups.find(g => Number(g.id) === Number(currentStudyGroupId));
                 const subject = subjects.find(s => Number(s.id) === Number(group?.subjectId));
                 groupName = `${escapeHtml(subject ? subject.name + ' / ' : '')}${escapeHtml(group?.name || '')}`;
@@ -1470,18 +1598,7 @@
                 if (e.code === 'ArrowLeft') {
                     e.preventDefault();
                     const unmastered = getUnmasteredCards(currentStudyGroupId);
-                    if (unmastered.length === 0) {
-                        if (getUnmasteredCards(currentStudyGroupId).length === 0) {
-                            showToast("🎉 恭喜！你已经掌握了当前卡组的所有卡片！");
-                            if (confirm("所有卡片已掌握，是否重置本组记忆状态？")) {
-                                masteredCardsMap.set(Number(currentStudyGroupId), new Set());
-                                const newCard = getRandomUnmasteredCard(currentStudyGroupId);
-                                if (newCard) { currentStudyCard = newCard; studyAnswerVisible = false; renderStudyModeView(); }
-                                else exitStudyMode();
-                            }
-                        } else showToast("暂无可抽卡片", true);
-                        return;
-                    }
+                    if (unmastered.length === 0) { showToast("暂无可抽卡片", true); return; }
                     const currentIndex = unmastered.findIndex(c => Number(c.id) === Number(currentStudyCard.id));
                     const prevIndex = (currentIndex - 1 + unmastered.length) % unmastered.length;
                     currentStudyCard = unmastered[prevIndex];
@@ -1491,18 +1608,7 @@
                 if (e.code === 'ArrowRight') {
                     e.preventDefault();
                     const unmastered = getUnmasteredCards(currentStudyGroupId);
-                    if (unmastered.length === 0) {
-                        if (getUnmasteredCards(currentStudyGroupId).length === 0) {
-                            showToast("🎉 恭喜！你已经掌握了当前卡组的所有卡片！");
-                            if (confirm("所有卡片已掌握，是否重置本组记忆状态？")) {
-                                masteredCardsMap.set(Number(currentStudyGroupId), new Set());
-                                const newCard = getRandomUnmasteredCard(currentStudyGroupId);
-                                if (newCard) { currentStudyCard = newCard; studyAnswerVisible = false; renderStudyModeView(); }
-                                else exitStudyMode();
-                            }
-                        } else showToast("暂无可抽卡片", true);
-                        return;
-                    }
+                    if (unmastered.length === 0) { showToast("暂无可抽卡片", true); return; }
                     const currentIndex = unmastered.findIndex(c => Number(c.id) === Number(currentStudyCard.id));
                     const nextIndex = (currentIndex + 1) % unmastered.length;
                     currentStudyCard = unmastered[nextIndex];
@@ -1550,18 +1656,7 @@
             document.getElementById('editCurrentCardBtn')?.addEventListener('click', (e) => { e.stopPropagation(); openCardEditModal(currentStudyCard.id, currentStudyCard.question, currentStudyCard.answer); });
             document.getElementById('prevCardBtn')?.addEventListener('click', () => {
                 const unmastered = getUnmasteredCards(currentStudyGroupId);
-                if (unmastered.length === 0) {
-                    if (getUnmasteredCards(currentStudyGroupId).length === 0) {
-                        showToast("🎉 恭喜！你已经掌握了当前卡组的所有卡片！");
-                        if (confirm("所有卡片已掌握，是否重置本组记忆状态？")) {
-                            masteredCardsMap.set(Number(currentStudyGroupId), new Set());
-                            const newCard = getRandomUnmasteredCard(currentStudyGroupId);
-                            if (newCard) { currentStudyCard = newCard; studyAnswerVisible = false; renderStudyModeView(); }
-                            else exitStudyMode();
-                        }
-                    } else showToast("暂无可抽卡片", true);
-                    return;
-                }
+                if (unmastered.length === 0) { showToast("暂无可抽卡片", true); return; }
                 const currentIndex = unmastered.findIndex(c => Number(c.id) === Number(currentStudyCard.id));
                 const prevIndex = (currentIndex - 1 + unmastered.length) % unmastered.length;
                 currentStudyCard = unmastered[prevIndex];
@@ -1570,36 +1665,14 @@
             });
             document.getElementById('randomCardBtn')?.addEventListener('click', () => {
                 const nextCard = getRandomUnmasteredCard(currentStudyGroupId);
-                if (!nextCard) {
-                    if (getUnmasteredCards(currentStudyGroupId).length === 0) {
-                        showToast("🎉 恭喜！你已经掌握了当前卡组的所有卡片！");
-                        if (confirm("所有卡片已掌握，是否重置本组记忆状态？")) {
-                            masteredCardsMap.set(Number(currentStudyGroupId), new Set());
-                            const newCard = getRandomUnmasteredCard(currentStudyGroupId);
-                            if (newCard) { currentStudyCard = newCard; studyAnswerVisible = false; renderStudyModeView(); }
-                            else exitStudyMode();
-                        }
-                    } else showToast("暂无可抽卡片", true);
-                    return;
-                }
+                if (!nextCard) { showToast("暂无可抽卡片", true); return; }
                 currentStudyCard = nextCard;
                 studyAnswerVisible = false;
                 renderStudyModeView();
             });
             document.getElementById('nextCardBtn')?.addEventListener('click', () => {
                 const unmastered = getUnmasteredCards(currentStudyGroupId);
-                if (unmastered.length === 0) {
-                    if (getUnmasteredCards(currentStudyGroupId).length === 0) {
-                        showToast("🎉 恭喜！你已经掌握了当前卡组的所有卡片！");
-                        if (confirm("所有卡片已掌握，是否重置本组记忆状态？")) {
-                            masteredCardsMap.set(Number(currentStudyGroupId), new Set());
-                            const newCard = getRandomUnmasteredCard(currentStudyGroupId);
-                            if (newCard) { currentStudyCard = newCard; studyAnswerVisible = false; renderStudyModeView(); }
-                            else exitStudyMode();
-                        }
-                    } else showToast("暂无可抽卡片", true);
-                    return;
-                }
+                if (unmastered.length === 0) { showToast("暂无可抽卡片", true); return; }
                 const currentIndex = unmastered.findIndex(c => Number(c.id) === Number(currentStudyCard.id));
                 const nextIndex = (currentIndex + 1) % unmastered.length;
                 currentStudyCard = unmastered[nextIndex];
@@ -1652,9 +1725,8 @@
                 mainDiv.innerHTML = `<div class="content-header" id="contentHeader"><div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;"><button id="toggleSidebarBtn" class="toggle-sidebar-btn" title="切换侧边栏"><i class="fas fa-bars"></i></button><h3 id="currentGroupTitle">选择一个卡组</h3><div style="position: relative; flex: 1; max-width: 300px;"><input type="text" id="cardSearchInput" placeholder="搜索卡片..." style="width: 100%; padding: 0.6rem 1rem; border-radius: 2rem; border: 1px solid #cde0ea; font-size: 0.9rem;" /></div></div><div class="toolbar-buttons" id="groupToolbar" style="display: none;"><button class="btn-icon" id="addCardBtn"><i class="fas fa-plus"></i> 新增卡片</button><button class="btn-icon" id="downloadTemplateBtn"><i class="fas fa-download"></i> 下载模版</button><button class="btn-icon" id="importExcelBtn"><i class="fas fa-upload"></i> 导入Excel</button><button class="btn-icon" id="exportExcelBtn"><i class="fas fa-file-excel"></i> 导出Excel</button><button class="btn-icon" id="loadJsonBtn"><i class="fas fa-file-import"></i> 加载JSON</button><button class="btn-icon" id="exportJsonBtn"><i class="fas fa-file-code"></i> 导出JSON</button><button class="btn-icon btn-primary" id="startStudyBtn"><i class="fas fa-graduation-cap"></i> 开始学习</button></div></div><div id="cardsListContainer" class="cards-grid"></div>`;
             }
             if (currentGroupId) {
-                if (currentGroupId === REVIEW_GROUP_ID) {
-                    document.getElementById('currentGroupTitle').innerHTML = '<i class="fas fa-star"></i> 复习卡组';
-                } else {
+                if (currentGroupId === REVIEW_GROUP_ID) document.getElementById('currentGroupTitle').innerHTML = '<i class="fas fa-star"></i> 复习卡组';
+                else {
                     const group = groups.find(g => Number(g.id) === Number(currentGroupId));
                     const subject = subjects.find(s => Number(s.id) === Number(group?.subjectId));
                     document.getElementById('currentGroupTitle').innerHTML = `<i class="fas fa-folder-open"></i> ${escapeHtml(subject ? subject.name + ' / ' : '')}${escapeHtml(group?.name || '卡组')}`;
@@ -1668,17 +1740,8 @@
             }
             bindToolbarEvents();
             bindSearchEvents();
-            
-            // 重新绑定切换侧边栏的事件
-            const toggleSidebarBtn = document.getElementById('toggleSidebarBtn');
-            if (toggleSidebarBtn) {
-                toggleSidebarBtn.addEventListener('click', function() {
-                    const appLayout = document.querySelector('.app-layout');
-                    if (appLayout) {
-                        appLayout.classList.toggle('sidebar-hidden');
-                    }
-                });
-            }
+            // 重新绑定侧边栏按钮（因为 innerHTML 重置了）
+            initSidebarToggle();
         }
 
         // Excel 导入导出
@@ -1690,7 +1753,6 @@
             XLSX.writeFile(wb, `卡片导入模版_含科目.xlsx`);
             showToast("模版已下载，包含「科目」「卡组」「题目」「答案」列");
         }
-
         function triggerImport() { const input = document.createElement('input'); input.type = 'file'; input.accept = '.xlsx, .xls'; input.onchange = (e) => { if (e.target.files[0]) importExcelWithGroups(e.target.files[0]); }; input.click(); }
         function importExcelWithGroups(file) {
             const reader = new FileReader();
@@ -1701,9 +1763,7 @@
                 const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
                 if (!rows.length) { showToast("Excel 文件无数据", true); return; }
                 let addedCards = 0;
-                const newCardsToAdd = [];
-                const newGroupsToAdd = [];
-                const newSubjectsToAdd = [];
+                const newCardsToAdd = [], newGroupsToAdd = [], newSubjectsToAdd = [];
                 let uniqueIdCounter = 0;
                 for (let row of rows) {
                     let subjectName = row["科目"] || "";
@@ -1713,7 +1773,6 @@
                     if (!question && !answer) continue;
                     if (!question) question = "无标题";
                     if (!answer) answer = "";
-
                     let targetSubjectId = null;
                     if (subjectName) {
                         let existSubject = subjects.find(s => s.name === subjectName);
@@ -1727,7 +1786,6 @@
                         if (subjects.length > 0) targetSubjectId = subjects[0].id;
                         else { showToast("无科目且未创建科目，请先创建科目", true); continue; }
                     }
-
                     let targetGroupId = null;
                     if (groupName) {
                         let existGroup = groups.find(g => g.name === groupName && Number(g.subjectId) === Number(targetSubjectId));
@@ -1737,10 +1795,7 @@
                             if (tempGroup) targetGroupId = tempGroup.id;
                             else { const newId = Date.now() + uniqueIdCounter++; newGroupsToAdd.push({ id: newId, name: groupName, subjectId: targetSubjectId }); targetGroupId = newId; }
                         }
-                    } else {
-                        showToast("卡组名称为空，跳过", true); continue;
-                    }
-
+                    } else { showToast("卡组名称为空，跳过", true); continue; }
                     newCardsToAdd.push({ id: Date.now() + uniqueIdCounter++, groupId: targetGroupId, question: question.trim(), answer: answer.trim() });
                     addedCards++;
                 }
@@ -1750,16 +1805,12 @@
                 if (addedCards === 0) { showToast("未发现有效的卡片数据", true); return; }
                 saveData();
                 renderGroupsSidebar();
-                if (currentGroupId) {
-                    const hasRelated = newCardsToAdd.some(c => Number(c.groupId) === Number(currentGroupId));
-                    if (hasRelated) renderCardsOfGroup();
-                }
+                if (currentGroupId && newCardsToAdd.some(c => Number(c.groupId) === Number(currentGroupId))) renderCardsOfGroup();
                 showToast(`成功导入 ${addedCards} 张卡片，${newGroupsToAdd.length} 个新卡组，${newSubjectsToAdd.length} 个新科目`);
             };
             reader.onerror = () => showToast("文件读取失败", true);
             reader.readAsArrayBuffer(file);
         }
-
         function exportGroupExcel() {
             const modalDiv = document.createElement('div'); modalDiv.className = 'modal';
             modalDiv.innerHTML = `<div class="modal-content" style="min-width: 300px;"><h3>选择导出范围</h3><div style="margin: 1.5rem 0;"><label style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.8rem; cursor: pointer; white-space: nowrap;"><span>导出当前卡组 (${currentGroupId ? getCardsByGroup(currentGroupId).length : 0} 张卡片)</span><input type="radio" name="exportScope" value="current" ${currentGroupId ? 'checked' : 'disabled'} /></label><label style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.8rem; cursor: pointer; white-space: nowrap;"><span>导出全部卡组 (${cards.length} 张卡片)</span><input type="radio" name="exportScope" value="all" checked /></label></div><div style="display:flex; gap:12px; justify-content:end;"><button id="exportCancel">取消</button><button id="exportConfirm" class="btn-primary">确定</button></div></div>`;
@@ -1794,7 +1845,19 @@
             document.body.appendChild(modalDiv); modalDiv.style.display = 'flex';
             const close = () => { if (modalDiv && modalDiv.parentNode) modalDiv.parentNode.removeChild(modalDiv); };
             document.getElementById('modalCancel').onclick = close;
-            document.getElementById('modalSave').onclick = (e) => { e.stopPropagation(); const questionInput = document.getElementById('modalQuestion'); const answerInput = document.getElementById('modalAnswer'); if (questionInput && answerInput) { const newQ = questionInput.value.trim(); const newA = answerInput.value; if (!newQ) { showToast("题目不能为空", true); return; } if (currentEditCardId === null) addCard(newQ, newA); else updateCard(currentEditCardId, newQ, newA); close(); } };
+            document.getElementById('modalSave').onclick = (e) => {
+                e.stopPropagation();
+                const questionInput = document.getElementById('modalQuestion');
+                const answerInput = document.getElementById('modalAnswer');
+                if (questionInput && answerInput) {
+                    const newQ = questionInput.value.trim();
+                    const newA = answerInput.value;
+                    if (!newQ) { showToast("题目不能为空", true); return; }
+                    if (currentEditCardId === null) addCard(newQ, newA);
+                    else updateCard(currentEditCardId, newQ, newA);
+                    close();
+                }
+            };
         }
 
         function bindToolbarEvents() {
@@ -1824,28 +1887,73 @@
 
         function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, function (m) { if (m === '&') return '&amp;'; if (m === '<') return '&lt;'; if (m === '>') return '&gt;'; return m; }); }
 
+        // 侧边栏切换功能（电脑端折叠，移动端滑出）
+        function initSidebarToggle() {
+            const toggleBtn = document.getElementById('toggleSidebarBtn');
+            const closeBtn = document.getElementById('closeSidebarBtn');
+            const mainContent = document.getElementById('mainContent');
+            const appLayout = document.getElementById('appLayout');
+            
+            if (!toggleBtn || !mainContent || !appLayout) return;
+            
+            function toggleSidebar() {
+                const isMobile = window.innerWidth <= 768;
+                if (isMobile) {
+                    appLayout.classList.toggle('sidebar-visible');
+                } else {
+                    appLayout.classList.toggle('sidebar-collapsed');
+                }
+            }
+            
+            function closeSidebar() {
+                const isMobile = window.innerWidth <= 768;
+                if (isMobile) {
+                    appLayout.classList.remove('sidebar-visible');
+                } else {
+                    appLayout.classList.remove('sidebar-collapsed');
+                }
+            }
+            
+            function resetSidebarState() {
+                const isMobile = window.innerWidth <= 768;
+                if (isMobile) {
+                    appLayout.classList.remove('sidebar-collapsed');
+                } else {
+                    appLayout.classList.remove('sidebar-visible');
+                }
+            }
+            
+            toggleBtn.addEventListener('click', toggleSidebar);
+            if (closeBtn) {
+                closeBtn.addEventListener('click', closeSidebar);
+            }
+            
+            mainContent.addEventListener('click', (e) => {
+                const isMobile = window.innerWidth <= 768;
+                if (isMobile && appLayout.classList.contains('sidebar-visible')) {
+                    if (!e.target.closest('.groups-sidebar') && !e.target.closest('.toggle-sidebar-btn')) {
+                        closeSidebar();
+                    }
+                }
+            });
+            
+            window.addEventListener('resize', () => {
+                resetSidebarState();
+            });
+            
+            resetSidebarState();
+        }
+
         async function init() {
             initMarkdown();
             await loadData();
             renderGroupsSidebar();
+            renderReviewFixed();
             bindToolbarEvents();
             bindSearchEvents();
             document.getElementById('newSubjectBtn').addEventListener('click', () => openEditSubjectModal(null, ''));
+            initSidebarToggle();
         }
-        
-        // 绑定切换侧边栏的事件
-        document.addEventListener('DOMContentLoaded', function() {
-            const toggleSidebarBtn = document.getElementById('toggleSidebarBtn');
-            if (toggleSidebarBtn) {
-                toggleSidebarBtn.addEventListener('click', function() {
-                    const appLayout = document.querySelector('.app-layout');
-                    if (appLayout) {
-                        appLayout.classList.toggle('sidebar-hidden');
-                    }
-                });
-            }
-        });
-        
         init();
     </script>
 </body>
