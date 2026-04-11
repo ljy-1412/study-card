@@ -536,7 +536,8 @@
                     <button class="btn-icon" id="downloadTemplateBtn"><i class="fas fa-download"></i> 下载模版</button>
                     <button class="btn-icon" id="importExcelBtn"><i class="fas fa-upload"></i> 导入Excel</button>
                     <button class="btn-icon" id="exportExcelBtn"><i class="fas fa-file-excel"></i> 导出Excel</button>
-					<button class="btn-icon" id="exportJsonBtn"><i class="fas fa-file-code"></i> 导出JSON</button>
+                    <button class="btn-icon" id="loadJsonBtn"><i class="fas fa-file-import"></i> 加载JSON</button>
+                    <button class="btn-icon" id="exportJsonBtn"><i class="fas fa-file-code"></i> 导出JSON</button>
                     <button class="btn-icon btn-primary" id="startStudyBtn"><i class="fas fa-graduation-cap"></i>
                         开始学习</button>
                 </div>
@@ -572,23 +573,61 @@
             toast.style.opacity = '1';
             setTimeout(() => toast.style.opacity = '0', 2500);
         }
-		
-		function exportToJson() {
-    const exportData = {
-        subjects: subjects,
-        groups: groups.map(g => ({ id: g.id, name: g.name, subjectId: g.subjectId })),
-        cards: cards.map(c => ({ id: c.id, groupId: c.groupId, question: c.question, answer: c.answer }))
-    };
-    const dataStr = JSON.stringify(exportData, null, 2);
-    const blob = new Blob([dataStr], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'data.json';
-    a.click();
-    URL.revokeObjectURL(url);
-    showToast('已导出 data.json 文件，请手动覆盖原文件');
-}
+
+        // 导出为 JSON 文件
+        function exportToJson() {
+            const exportData = {
+                subjects: subjects,
+                groups: groups.map(g => ({ id: g.id, name: g.name, subjectId: g.subjectId })),
+                cards: cards.map(c => ({ id: c.id, groupId: c.groupId, question: c.question, answer: c.answer }))
+            };
+            const dataStr = JSON.stringify(exportData, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'data.json';
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('已导出 data.json 文件');
+        }
+
+        // 手动加载 JSON 文件
+        function loadJsonFromFile() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'application/json';
+            input.onchange = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    try {
+                        const data = JSON.parse(ev.target.result);
+                        if (data.subjects && Array.isArray(data.subjects)) subjects = data.subjects;
+                        if (data.groups && Array.isArray(data.groups)) groups = data.groups;
+                        if (data.cards && Array.isArray(data.cards)) cards = data.cards;
+                        // 确保每个 group 都有 subjectId（兼容旧格式）
+                        groups.forEach(g => {
+                            if (g.subjectId === undefined && subjects.length) {
+                                g.subjectId = subjects[0].id;
+                            }
+                        });
+                        // 保存到 localStorage
+                        saveData();
+                        // 重新渲染界面
+                        renderGroupsSidebar();
+                        if (currentGroupId) renderCardsOfGroup();
+                        showToast('成功加载 JSON 文件');
+                    } catch (err) {
+                        console.error(err);
+                        showToast('JSON 解析失败，请检查文件格式', true);
+                    }
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        }
 
         function initMarkdown() {
             showdownConverter = new showdown.Converter({
@@ -619,102 +658,71 @@
             localStorage.setItem('collapsedSubjects', JSON.stringify([...collapsedSubjects]));
         }
 
-        // 从 JSON 文件加载初始数据（仅当 localStorage 为空时调用）
-        async function loadInitialDataFromJson() {
+        // 强制从 data.json 加载（用于 HTTP 环境）
+        async function loadDataFromJsonFile() {
             try {
                 const response = await fetch('data.json');
-                if (!response.ok) throw new Error('HTTP ' + response.status);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
                 const data = await response.json();
                 if (data.subjects && Array.isArray(data.subjects)) subjects = data.subjects;
                 if (data.groups && Array.isArray(data.groups)) groups = data.groups;
                 if (data.cards && Array.isArray(data.cards)) cards = data.cards;
-                // 确保每个 group 都有 subjectId（兼容旧格式）
-                groups.forEach(g => { if (g.subjectId === undefined && subjects.length) g.subjectId = subjects[0].id; });
+                groups.forEach(g => {
+                    if (g.subjectId === undefined && subjects.length) {
+                        g.subjectId = subjects[0].id;
+                    }
+                });
                 saveData();
-                showToast('已从 data.json 加载初始知识库');
+                showToast('已从 data.json 加载知识库');
+                return true;
             } catch (err) {
-                console.warn('无法加载 data.json，使用空知识库', err);
-                subjects = [];
-                groups = [];
-                cards = [];
-                // 创建默认示例数据
-                const defaultSubject = { id: Date.now(), name: "示例科目" };
-                subjects.push(defaultSubject);
-                const defaultGroup = { id: Date.now(), name: "示例卡组", subjectId: defaultSubject.id };
-                groups.push(defaultGroup);
-                cards.push({ id: Date.now(), groupId: defaultGroup.id, question: "欢迎使用", answer: "您可以导入 Excel 或手动添加卡片。" });
-                saveData();
+                console.warn('自动加载 data.json 失败', err);
+                return false;
             }
         }
 
-async function loadData() {
-    // 强制从 data.json 加载知识库内容，忽略 localStorage 中的 subjects/groups/cards
-    try {
-        const response = await fetch('data.json');
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const data = await response.json();
-        
-        // 用 JSON 内容覆盖 subjects, groups, cards
-        subjects = data.subjects && Array.isArray(data.subjects) ? data.subjects : [];
-        groups = data.groups && Array.isArray(data.groups) ? data.groups : [];
-        cards = data.cards && Array.isArray(data.cards) ? data.cards : [];
-        
-        // 确保每个 group 都有 subjectId（兼容旧格式）
-        groups.forEach(g => {
-            if (g.subjectId === undefined && subjects.length) {
-                g.subjectId = subjects[0].id;
+        async function loadData() {
+            // 优先尝试从同目录的 data.json 自动加载（仅当通过 HTTP 访问时有效）
+            const loaded = await loadDataFromJsonFile();
+            if (!loaded) {
+                // 如果自动加载失败，尝试从 localStorage 读取已有数据
+                const storedSubjects = localStorage.getItem('subjects_data');
+                const storedGroups = localStorage.getItem('groups_data');
+                const storedCards = localStorage.getItem('cards_data');
+                const storedCollapsed = localStorage.getItem('collapsedSubjects');
+                if (storedSubjects && storedGroups && storedCards) {
+                    subjects = JSON.parse(storedSubjects);
+                    groups = JSON.parse(storedGroups);
+                    cards = JSON.parse(storedCards);
+                    if (storedCollapsed) collapsedSubjects = new Set(JSON.parse(storedCollapsed));
+                    // 确保旧数据有 subjectId
+                    let needSave = false;
+                    groups.forEach(g => {
+                        if (g.subjectId === undefined && subjects.length) {
+                            g.subjectId = subjects[0].id;
+                            needSave = true;
+                        }
+                    });
+                    if (needSave) saveData();
+                    showToast('已从本地存储加载');
+                } else {
+                    // 没有任何数据，创建示例
+                    subjects = [];
+                    groups = [];
+                    cards = [];
+                    const defaultSubject = { id: Date.now(), name: "示例科目" };
+                    subjects.push(defaultSubject);
+                    const defaultGroup = { id: Date.now(), name: "示例卡组", subjectId: defaultSubject.id };
+                    groups.push(defaultGroup);
+                    cards.push({ id: Date.now(), groupId: defaultGroup.id, question: "欢迎使用", answer: "请点击「加载JSON」按钮选择您的 data.json 文件。" });
+                    saveData();
+                    showToast('未找到数据，已创建示例');
+                }
             }
-        });
-        
-        // 如果 data.json 为空，创建一条示例（避免空白界面）
-        if (subjects.length === 0 && groups.length === 0 && cards.length === 0) {
-            const defaultSubject = { id: Date.now(), name: "示例科目" };
-            subjects.push(defaultSubject);
-            const defaultGroup = { id: Date.now(), name: "示例卡组", subjectId: defaultSubject.id };
-            groups.push(defaultGroup);
-            cards.push({ id: Date.now(), groupId: defaultGroup.id, question: "欢迎使用", answer: "请编辑 data.json 添加您的知识库。" });
+            // 恢复折叠状态（如果之前有）
+            const storedCollapsed = localStorage.getItem('collapsedSubjects');
+            if (storedCollapsed) collapsedSubjects = new Set(JSON.parse(storedCollapsed));
         }
-        
-        // 将知识库内容保存到 localStorage（供导出等功能使用，但下次启动仍会被 JSON 覆盖）
-        localStorage.setItem('subjects_data', JSON.stringify(subjects));
-        localStorage.setItem('groups_data', JSON.stringify(groups));
-        localStorage.setItem('cards_data', JSON.stringify(cards));
-        
-        // 恢复折叠状态和记忆状态（这些属于用户进度，不从 JSON 覆盖）
-        const storedCollapsed = localStorage.getItem('collapsedSubjects');
-        if (storedCollapsed) collapsedSubjects = new Set(JSON.parse(storedCollapsed));
-        
-        // 注意：masteredCardsMap 不存储在 JSON 中，所以不受影响，会从 localStorage 保留
-        showToast('已从 data.json 加载知识库');
-    } catch (err) {
-        console.error('加载 data.json 失败:', err);
-        showToast('无法加载 data.json，请确保文件存在且格式正确', true);
-        
-        // 降级：尝试从 localStorage 读取（旧数据）
-        const storedSubjects = localStorage.getItem('subjects_data');
-        const storedGroups = localStorage.getItem('groups_data');
-        const storedCards = localStorage.getItem('cards_data');
-        if (storedSubjects && storedGroups && storedCards) {
-            subjects = JSON.parse(storedSubjects);
-            groups = JSON.parse(storedGroups);
-            cards = JSON.parse(storedCards);
-            showToast('已从本地存储加载（data.json 不可用）');
-        } else {
-            // 最后创建空示例
-            subjects = [];
-            groups = [];
-            cards = [];
-            const defaultSubject = { id: Date.now(), name: "示例科目" };
-            subjects.push(defaultSubject);
-            const defaultGroup = { id: Date.now(), name: "示例卡组", subjectId: defaultSubject.id };
-            groups.push(defaultGroup);
-            cards.push({ id: Date.now(), groupId: defaultGroup.id, question: "欢迎使用", answer: "请放置 data.json 文件到同目录下。" });
-            localStorage.setItem('subjects_data', JSON.stringify(subjects));
-            localStorage.setItem('groups_data', JSON.stringify(groups));
-            localStorage.setItem('cards_data', JSON.stringify(cards));
-        }
-    }
-}
 
         function getCardsByGroup(groupId) { return cards.filter(c => Number(c.groupId) === Number(groupId)); }
         function getGroupNameById(id) { const g = groups.find(g => Number(g.id) === Number(id)); return g ? g.name : ''; }
@@ -1367,10 +1375,11 @@ async function loadData() {
 
         function bindToolbarEvents() {
             document.getElementById('addCardBtn')?.addEventListener('click', () => openCardAddModal());
-			document.getElementById('exportJsonBtn')?.addEventListener('click', exportToJson);
             document.getElementById('downloadTemplateBtn')?.addEventListener('click', downloadTemplate);
             document.getElementById('importExcelBtn')?.addEventListener('click', triggerImport);
             document.getElementById('exportExcelBtn')?.addEventListener('click', exportGroupExcel);
+            document.getElementById('loadJsonBtn')?.addEventListener('click', loadJsonFromFile);
+            document.getElementById('exportJsonBtn')?.addEventListener('click', exportToJson);
             document.getElementById('startStudyBtn')?.addEventListener('click', () => {
                 const groupCards = getCardsByGroup(currentGroupId);
                 if (!groupCards.length) { showToast("当前卡组无卡片，请先添加", true); return; }
